@@ -23,15 +23,16 @@
 ## 架构一图流
 
 ```
-Agent A(claude)   Agent B(gpt)   Claude Code/Cursor
-     │HTTP            │HTTP            │MCP(stdio→薄代理→HTTP)
-     └───────┬────────┴────────────────┘
-   ┌─────────▼──────────────────────────┐
-   │  内存池服务进程（唯一写者，独占数据）  │
-   │  mem0 + faiss + fastembed + SQLite  │
-   └─────────┬──────────────────────────┘
-             │ 仅拆解/固化/真Agent时
-        聚合网关云 LLM（一 key 多厂家）
+Agent A/B (HTTP)   IDE 五工具 (stdio MCP)   AgentClaw (/mcp HTTP)
+     │                    │                       │
+     └─────────┬──────────┴───────────────────────┘
+   ┌───────────▼────────────────────────────────┐
+   │  内存池服务进程（唯一写者，独占数据）           │
+   │  REST /add /search  +  MCP /mcp              │
+   │  mem0 + faiss + fastembed + SQLite           │
+   └───────────┬────────────────────────────────┘
+               │ 仅拆解/固化/真Agent时
+          聚合网关云 LLM（一 key 多厂家）
 ```
 
 技术选型：[mem0](https://github.com/mem0ai/mem0)（2.0.13）为存储骨架，faiss 本地向量库，
@@ -57,9 +58,10 @@ powershell -ExecutionPolicy Bypass -File scripts\bootstrap.ps1 `
     -NestworkRemote https://github.com/<you>/nestwork-private.git   # 可省略
 ```
 
-脚本幂等，重复跑安全；结尾自带冒烟测试（客户端自动拉起守护进程 + health）。
+脚本幂等，重复跑安全；会注册登录自启（给 AgentClaw 等 HTTP 客户端兜底）+ 冒烟测试。
 密钥不随仓库走：从旧设备拷 `~/.agent_memory_pool/.env` 一个文件即可。
-参数详解、手动逐工具配置、故障排查见 [references/deployment.md](references/deployment.md)。
+**日常怎么用**（约定、跨工具话术、AgentClaw 分工）见 [references/usage.md](references/usage.md)；
+装机 / 换机 / 故障排查见 [references/deployment.md](references/deployment.md)。
 
 装完直接写代码——服务没起时首次调用**自动拉起**后台服务进程：
 
@@ -123,12 +125,17 @@ ANTHROPIC_BASE_URL=https://your-gateway.example.com
 [{ "name": "agent-memory-pool", "transport": "http", "url": "http://127.0.0.1:8800/mcp" }]
 ```
 
+AgentClaw 还要：agent 工具白名单 +（personal 会话）审查登记 + 池子先于网关在线
+（登录自启）。完整三步与话术见 [usage.md](references/usage.md) /
+[deployment.md D 节](references/deployment.md#d-接入-agentclaw-网关http-mcp)。
+
 ## 文档
 
 | 文档 | 内容 |
 |------|------|
 | [SKILL.md](SKILL.md) | Agent Skill 定义：触发条件、接入方式、工作流、常见坑 |
-| [references/deployment.md](references/deployment.md) | 部署说明：一键部署、五工具 MCP 配置、慢记忆层、排查 |
+| [references/usage.md](references/usage.md) | **如何使用**：约定、IDE/AgentClaw 话术、跨软件场景、FAQ |
+| [references/deployment.md](references/deployment.md) | 部署说明：一键部署、五工具 MCP、AgentClaw、慢记忆、排查 |
 | [references/architecture.md](references/architecture.md) | 架构、模块地图、设计决策、并发模型 |
 | [references/api-reference.md](references/api-reference.md) | HTTP / MCP / Python API 全参考 |
 | [references/workflows.md](references/workflows.md) | 协作链、固化、TTL、健康检查、部署形态 |
@@ -138,8 +145,9 @@ ANTHROPIC_BASE_URL=https://your-gateway.example.com
 
 ```bash
 uv run pytest -q
-# 无云 key：64 passed + 10 skipped（真 LLM 用例自动跳过）
-# 有云 key：全量 74 个，含真多厂家协作/真起进程/自动拉起/并发压测，约 80s
+# 无云 key：65 passed + 10 skipped（真 LLM 用例自动跳过）
+# 有云 key：全量 75 个，含真多厂家协作/真起进程/自动拉起/HTTP MCP/并发压测，约 80s
+# Windows 若遇临时目录 PermissionError：加 --basetemp <新目录>
 # 测试套件用独立临时数据目录，不会碰 ~/.agent_memory_pool 里的真实数据
 ```
 

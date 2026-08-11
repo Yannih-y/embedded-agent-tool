@@ -3,7 +3,7 @@
 > 多 Agent 共享内存池：打通不同厂家 AI 的交互壁垒，让各自独立进程的 Agent 共享记忆、协作完成任务。
 > 本文档如实记录当前状态——做完并实测的、还没做的、踩过的坑、已知瓶颈。
 
-最后更新：2026-08-11
+最后更新：2026-08-12
 
 ---
 
@@ -99,11 +99,15 @@
 # 环境（uv 管理，工程根有 .venv）
 uv sync --extra dev
 
-# 全量测试（有云 key 含真 LLM/真起进程慢用例约 80s；无 key 64 passed + 10 skipped）
+# 全量测试（有云 key 含真 LLM/真起进程慢用例约 80s；无 key 65 passed + 10 skipped）
 .venv/Scripts/python -m pytest -q
+# Windows 临时目录锁死时：加 --basetemp <新目录>
 
 # 起服务（可选——客户端首次调用会自动拉起，见 daemon.py）
 .venv/Scripts/python -m memorypool.server   # 默认 127.0.0.1:8800，MEMPOOL_HOST/PORT 可改
+# 登录自启入口（Windows HKCU Run）：pythonw -m memorypool.daemon
+
+# 日常用法：references/usage.md ；装机换机：references/deployment.md
 
 # 健康检查
 curl http://127.0.0.1:8800/health          # 轻量：服务 + 密钥状态

@@ -107,6 +107,8 @@ daemon.ensure_service(base_url, timeout=120) -> int | None
 - 竞态自愈：两个客户端同时拉起，抢输端口的 uvicorn 自己退出，健康探测照样变绿
 - 日志落 `MEMPOOL_DATA_ROOT/logs/server.log`，PID 落 `MEMPOOL_DATA_ROOT/server.pid`
 - 等就绪超时由 `MEMPOOL_AUTOSTART_TIMEOUT` 控制（默认 120s，首次要加载 embedding 模型）
+- **登录自启入口**：`pythonw -m memorypool.daemon`（或 `python -m memorypool.daemon`）
+  调用 `ensure_service` 后自身退出；Windows 挂 `HKCU Run\AgentMemoryPool`（bootstrap 自动注册）
 
 ### `pool.MemoryPool`（仅服务进程内实例化）
 

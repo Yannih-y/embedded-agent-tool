@@ -1,5 +1,8 @@
 # 工作流详解
 
+日常「怎么对 agent 说话 / 跨软件互通」见 [usage.md](usage.md)。
+本文讲机制级工作流：协作链、固化、TTL、健康检查、部署形态。
+
 ## 1. 完整协作链（decompose → DAG → 真 Agent → 固化 → 恢复）
 
 对应 `tests/test_e2e_full_chain.py`（真云 LLM 实测通过的链路）：

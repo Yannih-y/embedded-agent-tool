@@ -88,6 +88,9 @@ ANTHROPIC_BASE_URL=https://your-gateway.example.com
 
 ## 第二步：接入（三选一）
 
+日常怎么说、跨软件互通、AgentClaw 与内部记忆的分工 → 先读
+[references/usage.md](references/usage.md)。下面是接入配置速查。
+
 ### Python SDK（最省事：连服务都不用管）
 
 ```python
@@ -134,6 +137,11 @@ MCP 层是无状态薄代理，把工具调用转成 HTTP 打给服务进程。�
 工具两个：`add_memory(content, user_id, agent_id?, tier?)`、
 `search_memory(query, user_id, limit?)`。
 
+对 agent 的示例话术：
+
+- 「用 add_memory 记住：…，user_id=`alice`，agent_id 写 `cursor`」
+- 「用 search_memory 查 user_id=`alice` 的登录方案」
+
 ### HTTP MCP（AgentClaw 网关等不便拉 stdio 子进程的客户端）
 
 服务进程自带 streamable-http 端点 `POST /mcp`（stateless + 纯 JSON 响应），
@@ -143,6 +151,10 @@ MCP 层是无状态薄代理，把工具调用转成 HTTP 打给服务进程。�
 // AgentClaw data/mcp-servers.json
 [{ "name": "agent-memory-pool", "transport": "http", "url": "http://127.0.0.1:8800/mcp" }]
 ```
+
+AgentClaw 额外步骤（白名单 / personal 审查登记 / 启动顺序）见
+[deployment.md D 节](references/deployment.md#d-接入-agentclaw-网关http-mcp) 与
+[usage.md](references/usage.md#在-agentclaw-里怎么用)。
 
 ## 核心概念速查
 
@@ -210,7 +222,8 @@ result = await Orchestrator(agent_pool.as_dict()).run(tasks)
 
 | 主题 | 文件 |
 |------|------|
-| 部署说明（一键部署 / 五工具 MCP / 慢记忆层 / 排查） | [references/deployment.md](references/deployment.md) |
+| **如何使用**（约定 / IDE·AgentClaw 话术 / 场景 / FAQ） | [references/usage.md](references/usage.md) |
+| 部署说明（一键部署 / 五工具 MCP / AgentClaw / 慢记忆层 / 排查） | [references/deployment.md](references/deployment.md) |
 | 架构与设计决策（分层/单写者/时间维度/关系表选型） | [references/architecture.md](references/architecture.md) |
 | API 参考（HTTP 端点 / MCP 工具 / Python 类） | [references/api-reference.md](references/api-reference.md) |
 | 工作流详解（协作链 / 固化 / TTL / 健康检查） | [references/workflows.md](references/workflows.md) |

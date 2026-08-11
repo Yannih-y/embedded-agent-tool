@@ -36,14 +36,20 @@
 
 ### 文档
 
+- **新增 [references/usage.md](references/usage.md)「如何使用」**：心智模型、
+  `user_id`/`agent_id` 约定、IDE 五工具与 AgentClaw 话术、典型场景（IDE↔IDE /
+  IDE↔网关 / DAG / 快慢记忆分工）、服务生命周期、使用向 FAQ；与 deployment
+  （装机）分工明确
+- README 架构图改为三入口（REST + stdio MCP + `/mcp`）；文档表 / 测试计数
+  对齐 65+10=75；SKILL / deployment 首页 / api-reference daemon / workflows /
+  BACKLOG 交叉链接到 usage.md
 - deployment.md 新增 **D 节「接入 AgentClaw 网关（HTTP MCP）」**：三步接入
   （mcp-servers.json / agent 白名单 / personal 会话 per-tool 审查登记）+
   启动顺序说明；B 节脚本步骤与参数表同步登录自启；README / SKILL /
   api-reference 补 `/mcp` 端点章节；workflows.md 测试计数 65+10=75 并记
   Windows pytest 临时根 PermissionError 的 `--basetemp` 绕法
-- 全量校订：workflows.md 测试计数改为 64+10=74；SKILL.md / README /
-  workflows.md 补部署文档链接；SKILL.md MCP 支持清单扩为五工具；
-  bootstrap.ps1 收尾提示的 user_id 示例通用化（不再硬编码个人 id）
+- 全量校订：SKILL.md MCP 支持清单扩为五工具；bootstrap.ps1 收尾提示的
+  user_id 示例通用化（不再硬编码个人 id）
 
 ## [0.2.0] - 2026-08-11
 
