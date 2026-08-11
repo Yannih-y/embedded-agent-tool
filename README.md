@@ -46,6 +46,20 @@ cd embedded-agent-tool
 uv sync --extra dev
 ```
 
+### Windows 换机一键部署
+
+新设备上克隆后跑一条命令，自动装依赖 + 检测本机装了哪些 agent 工具
+（Cursor / Claude Code / Codex / Windsurf / Kiro）并逐个注册 MCP，
+可选一并部署 [nestwork](https://github.com/songth1ef/nestwork) 慢记忆层：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\bootstrap.ps1 `
+    -NestworkRemote https://github.com/<you>/nestwork-private.git   # 可省略
+```
+
+脚本幂等，重复跑安全；结尾自带冒烟测试（客户端自动拉起守护进程 + health）。
+密钥不随仓库走：从旧设备拷 `~/.agent_memory_pool/.env` 一个文件即可。
+
 装完直接写代码——服务没起时首次调用**自动拉起**后台服务进程：
 
 ```python

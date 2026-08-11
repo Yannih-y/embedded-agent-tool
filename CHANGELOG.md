@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### 新增
+
+- **Windows 换机一键部署**（`scripts/bootstrap.ps1`，UTF-8 BOM 保证 PS 5.1 中文解析）：
+  - venv 装依赖（优先 uv，退回 pip -e .）+ 生成 `~/.agent_memory_pool/.env` 模板
+  - 自动检测 Cursor / Claude Code / Codex / Windsurf / Kiro 并逐个注册 MCP
+    （JSON 合并写入带幂等守卫，不重写已有条目、不碰其他 MCP server）
+  - 可选 `-NestworkRemote`：克隆 nestwork 慢记忆仓库并为检测到的工具装启动注入；
+    自动修补 Claude Code hooks 的裸 `bash` 为 Git Bash 绝对路径（避开 WSL）
+  - 结尾冒烟测试：SDK 自动拉起守护进程 + health 检查；全程幂等可重跑
+
 ## [0.2.0] - 2026-08-11
 
 零设置体验：装完即用，不用手动起服务，密钥只配一次（或完全不配）。
