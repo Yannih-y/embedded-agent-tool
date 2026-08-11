@@ -2,18 +2,24 @@
 
 唯一独占打开数据库文件的进程（决策10）。所有 Agent 经 HTTP 接入。
 砍掉 mem0 自带 server 的 postgres/auth/alembic/telemetry，只保留核心 Memory.from_config。
-任务8 会在此基础上加 MCP wrapper。
+
+对外两个口子，同一进程同一份数据：
+- REST：/add /search /health（curl / Python SDK 用）
+- MCP over streamable-http：/mcp（AgentClaw 等 HTTP transport 的 MCP 客户端用；
+  stdio MCP 仍走 memorypool.mcp_server 独立进程 → HTTP 代理回本服务）
 """
 
 import logging
 import os
 from contextlib import asynccontextmanager
+from typing import Any, Optional
 
 from fastapi import FastAPI
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 
 from memorypool.health_check import KeyCheck, check_key
+from memorypool.mcp_server import build_mcp
 from memorypool.pool import MemoryPool
 from memorypool.schema import Tier
 
@@ -30,6 +36,49 @@ def get_pool() -> MemoryPool:
     if _pool is None:
         raise RuntimeError("MemoryPool 尚未初始化")
     return _pool
+
+
+class _InProcessBackend:
+    """MCP /mcp 端点的进程内后端：直调本进程唯一的 MemoryPool。
+
+    不走 MemoryPoolClient 的 HTTP 回环（自己 POST 自己既多一跳，线程池吃紧时
+    还可能自锁）。工具函数是同步 def，FastMCP 会丢到工作线程执行，与 REST
+    路由的 run_in_threadpool 同一模式。惰性取 get_pool()：MCP app 在模块导入
+    期构建，而 _pool 要到 lifespan 才就绪。
+    """
+
+    def add(
+        self,
+        content: str,
+        user_id: str,
+        agent_id: Optional[str] = None,
+        run_id: Optional[str] = None,
+        tier: Tier = Tier.REALTIME,
+    ) -> dict[str, Any]:
+        return get_pool().add(
+            content, user_id=user_id, agent_id=agent_id, run_id=run_id, tier=tier
+        )
+
+    def search(self, query: str, user_id: str, limit: int = 10) -> dict[str, Any]:
+        return get_pool().search(query, user_id=user_id, limit=limit)
+
+
+# /mcp 的当前 ASGI 处理器。放 dict 而不是模块级变量重绑定，闭包好取。
+# SDK 约束：StreamableHTTPSessionManager 每个实例只能 run() 一次，所以 FastMCP
+# 必须在每次 lifespan 里重建（TestClient 反复进出 lifespan 时尤其）。
+_mcp_state: dict[str, Any] = {"app": None}
+
+
+async def _mcp_asgi(scope, receive, send):  # type: ignore[no-untyped-def]
+    """惰性转发到当前 lifespan 构建的 streamable-http app。"""
+    inner = _mcp_state["app"]
+    if inner is None:
+        await send(
+            {"type": "http.response.start", "status": 503, "headers": []}
+        )
+        await send({"type": "http.response.body", "body": b"MCP not ready"})
+        return
+    await inner(scope, receive, send)
 
 
 @asynccontextmanager
@@ -49,7 +98,13 @@ async def lifespan(app: FastAPI):
     logger.info("初始化 MemoryPool（服务独占数据库）...")
     _pool = MemoryPool()
     logger.info("MemoryPool 就绪")
-    yield
+    # streamable-http 的会话管理器必须在服务期内保持运行，否则 /mcp 一律 500
+    mcp = build_mcp(backend=_InProcessBackend(), http_mode=True)
+    inner = mcp.streamable_http_app()
+    async with mcp.session_manager.run():
+        _mcp_state["app"] = inner
+        yield
+    _mcp_state["app"] = None
     _pool = None
     _key_check = None
 
@@ -120,6 +175,11 @@ async def search(req: SearchRequest):
     return await run_in_threadpool(
         pool.search, req.query, user_id=req.user_id, limit=req.limit
     )
+
+
+# 挂在所有显式路由之后：FastAPI 按注册顺序匹配，/health /add /search 优先命中，
+# 其余路径落进 MCP 转发器（内部 streamable app 只服务 /mcp）。最终对外 URL：/mcp
+app.mount("/", _mcp_asgi)
 
 
 def main():

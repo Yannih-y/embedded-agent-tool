@@ -4,6 +4,17 @@
 
 ### 新增
 
+- **MCP over streamable-http 端点**（`/mcp`，挂在服务进程内）：
+  - `build_mcp(http_mode=True)`：stateless（免 MCP-Session-Id）+ json_response
+    （纯 JSON 非 SSE），适配只发独立 JSON-RPC POST 的简版 HTTP MCP 客户端
+    （首个消费者：AgentClaw 网关——其安全模型禁止带文件系统作用域的 agent
+    使用 stdio MCP，HTTP transport 是官方放行路径）
+  - `server.py` 用进程内直连后端（`_InProcessBackend`）挂载，不走 HTTP 自回环；
+    FastMCP 实例每次 lifespan 重建（SDK 的 session manager 只能 run() 一次，
+    TestClient 反复进出 lifespan 时必须新建）
+  - stdio 入口（`memorypool.mcp_server`）不受影响，五个 IDE 工具照旧
+  - 新测试 `tests/test_mcp_http_endpoint.py`：无会话头 initialize / tools/list /
+    写读闭环（注意 MCP SDK 自带 Host 头防护，测试须用回环 base_url）
 - **Windows 换机一键部署**（`scripts/bootstrap.ps1`，UTF-8 BOM 保证 PS 5.1 中文解析）：
   - venv 装依赖（优先 uv，退回 pip -e .）+ 生成 `~/.agent_memory_pool/.env` 模板
   - 自动检测 Cursor / Claude Code / Codex / Windsurf / Kiro 并逐个注册 MCP

@@ -17,8 +17,8 @@
   简要长期记忆 + 实体关系三元组，跨会话保留
 - **多厂家协作**：真 LLM 把任务拆成 DAG，流式调度分派给不同厂家的 Agent，
   重试 + fallback，模型运行时从网关挑选并探针验通路
-- **双接入口**：HTTP（任意语言）+ MCP（Claude Code / Cursor 一行配置接入），
-  落同一份数据
+- **三接入口**：HTTP（任意语言）+ stdio MCP（Claude Code / Cursor 等 IDE 工具
+  一行配置）+ streamable-http MCP（`/mcp`，AgentClaw 等 HTTP 客户端），落同一份数据
 
 ## 架构一图流
 
@@ -112,6 +112,16 @@ ANTHROPIC_BASE_URL=https://your-gateway.example.com
 > 铁律：数据库只有一个写者（服务进程）。MCP 层是无状态薄代理，一切经 HTTP 转发——
 > 两个进程同开一份 faiss 会静默丢数据。自动拉起不破坏这条：数据的主人永远只有
 > 一个服务进程，变的只是它由谁、何时启动。
+
+### 接入 HTTP MCP 客户端（如 AgentClaw 网关）
+
+服务进程自带 MCP streamable-http 端点 `POST /mcp`（stateless + 纯 JSON 响应），
+不方便拉 stdio 子进程的客户端直接指过来即可，同样落同一份数据：
+
+```jsonc
+// AgentClaw data/mcp-servers.json
+[{ "name": "agent-memory-pool", "transport": "http", "url": "http://127.0.0.1:8800/mcp" }]
+```
 
 ## 文档
 

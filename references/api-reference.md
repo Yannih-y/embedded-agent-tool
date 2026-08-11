@@ -52,17 +52,32 @@
 }
 ```
 
-## MCP 工具（memorypool.mcp_server，stdio 传输）
-
-薄代理：自己不碰数据库，全部转发 `MEMPOOL_BASE_URL` 指向的服务进程。
+## MCP 工具（两种传输，同一套工具）
 
 | 工具 | 参数 | 说明 |
 |------|------|------|
 | `add_memory` | `content, user_id, agent_id?, tier?` | 写记忆，同 user 下 Agent 都能检索到 |
 | `search_memory` | `query, user_id, limit?` | 检索：向量命中 + 相对时间 + 长期关系 |
 
+### stdio 传输（memorypool.mcp_server，IDE 工具用）
+
+薄代理：自己不碰数据库，全部转发 `MEMPOOL_BASE_URL` 指向的服务进程。
 启动：`python -m memorypool.mcp_server`（由 MCP 客户端拉起，环境变量
-`MEMPOOL_BASE_URL` 指定服务地址）。
+`MEMPOOL_BASE_URL` 指定服务地址）。Cursor / Claude Code / Codex /
+Windsurf / Kiro 走这条。
+
+### streamable-http 传输（`POST /mcp`，服务进程自带）
+
+服务进程直接暴露的 MCP 端点（`build_mcp(http_mode=True)` 挂载，进程内直连
+不回环）：stateless（不要求 MCP-Session-Id 头）+ 纯 JSON 响应（非 SSE），
+单次 JSON-RPC POST 即可调用。给不方便拉起 stdio 子进程、或安全模型限制
+stdio MCP 的客户端用（首个消费者：AgentClaw 网关，其安全边界禁止带文件
+系统作用域的 agent 用 stdio MCP，HTTP transport 走本机回环审计通道放行）。
+
+```jsonc
+// AgentClaw data/mcp-servers.json 示例
+[{ "name": "agent-memory-pool", "transport": "http", "url": "http://127.0.0.1:8800/mcp" }]
+```
 
 ## Python API（服务进程内 / 客户端）
 

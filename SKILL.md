@@ -26,7 +26,8 @@ compatibility: >
 
 打通不同厂家 AI 的交互壁垒：各自独立进程的 Agent 通过同一个内存池服务共享记忆、
 承接彼此产出、协作完成任务。mem0 为存储骨架（faiss 向量 + fastembed 本地
-embedding + SQLite 关系三元组），FastAPI 服务进程独占数据库，HTTP / MCP 双接入口。
+embedding + SQLite 关系三元组），FastAPI 服务进程独占数据库，三接入口：
+HTTP REST / stdio MCP（IDE 工具）/ streamable-http MCP（`/mcp`，AgentClaw 等）。
 
 ## 架构铁律（先读这条）
 
@@ -132,6 +133,16 @@ MCP 层是无状态薄代理，把工具调用转成 HTTP 打给服务进程。�
 
 工具两个：`add_memory(content, user_id, agent_id?, tier?)`、
 `search_memory(query, user_id, limit?)`。
+
+### HTTP MCP（AgentClaw 网关等不便拉 stdio 子进程的客户端）
+
+服务进程自带 streamable-http 端点 `POST /mcp`（stateless + 纯 JSON 响应），
+直接把 MCP 客户端指过来即可，工具同上：
+
+```jsonc
+// AgentClaw data/mcp-servers.json
+[{ "name": "agent-memory-pool", "transport": "http", "url": "http://127.0.0.1:8800/mcp" }]
+```
 
 ## 核心概念速查
 

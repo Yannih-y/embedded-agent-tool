@@ -54,14 +54,26 @@ class MemoryBackend(Protocol):
     def search(self, query: str, user_id: str, limit: int = ...) -> dict[str, Any]: ...
 
 
-def build_mcp(backend: Optional[MemoryBackend] = None) -> FastMCP:
+def build_mcp(
+    backend: Optional[MemoryBackend] = None,
+    *,
+    http_mode: bool = False,
+) -> FastMCP:
     """构造 MCP server。
 
     backend 不传则用 HTTP 代理（生产路径：转发给唯一的服务进程）。
     测试可注入 MemoryPool 直连，省去起服务。
+
+    http_mode=True 用于挂到服务进程内的 streamable-http 端点（见 server.py）：
+    - stateless_http：不要求客户端维护 MCP-Session-Id，单次 JSON-RPC POST 即可用
+      （AgentClaw 等简版 HTTP MCP 客户端只会发独立 POST，不做会话握手）
+    - json_response：响应用纯 JSON 而非 SSE 流，简版客户端才解析得动
     """
     mem: MemoryBackend = backend if backend is not None else MemoryPoolClient(DEFAULT_BASE_URL)
-    mcp = FastMCP("agent-memory-pool")
+    if http_mode:
+        mcp = FastMCP("agent-memory-pool", stateless_http=True, json_response=True)
+    else:
+        mcp = FastMCP("agent-memory-pool")
 
     @mcp.tool(description="写一条记忆到共享内存池。同一 user 下的 Agent 都能检索到。")
     def add_memory(

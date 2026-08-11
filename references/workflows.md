@@ -152,7 +152,10 @@ uv run python -m memorypool.server        # 唯一写者，独占 ~/.agent_memor
 | 真多厂家协作 + 内容承接 | `test_real_multi_agent.py` | 是（skipif 守卫） |
 | 真 LLM 全链路 e2e | `test_e2e_full_chain.py` | 是（skipif 守卫） |
 
-无 key 环境：64 passed + 10 skipped（共 74 个）。有 key 全量约 68~80s。
+无 key 环境：65 passed + 10 skipped（共 75 个）。有 key 全量约 68~80s。
+
+> Windows 注意：若全量跑出现 `pytest-of-<user>` 临时根 PermissionError（历史
+> 测试拉起的守护进程残留句柄所致），用 `--basetemp` 指个新临时目录即可绕开。
 
 ## 6. 诊断脚本（scripts/）
 
