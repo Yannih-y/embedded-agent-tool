@@ -89,6 +89,9 @@ powershell -ExecutionPolicy Bypass -File scripts\bootstrap.ps1 `
 | 慢记忆（nestwork 仓库） | git 自动同步，换机即有——前提是远程建在**私有**仓库 |
 | 快记忆数据（faiss + SQLite） | 默认不迁移，新机从空池开始；急用：停服务后整目录拷 `~/.agent_memory_pool`（路线图 0.3.0 做 markdown 导出 + git 同步根治） |
 
+> 小技巧：把带你真实仓库地址的完整换机命令存进**私有** nestwork 仓库的
+> `DEPLOY.md`——新设备登录 GitHub 打开该页即可复制；公开仓库的文档里只留占位符。
+
 ## C. 手动逐工具配置
 
 任何支持 MCP 的工具都认这个通用配置（把路径换成你的克隆位置）：
