@@ -153,3 +153,22 @@ def ensure_service(base_url: str, timeout: float = DEFAULT_READY_TIMEOUT) -> int
         f"自动拉起后 {timeout}s 内未就绪（首次运行可能在下载 embedding 模型），"
         f"日志：{_log_path()}\n{_log_tail()}"
     )
+
+
+def main() -> None:
+    """开机自启入口：`pythonw -m memorypool.daemon`。
+
+    确保服务在跑（不在则拉起守护进程），随后自身退出——常驻的是 spawn 出的
+    服务进程，不是本入口。设计给 Windows HKCU Run / 登录项用：pythonw 无窗口，
+    已就绪时幂等直接退出。失败静默（开机场景没有控制台可看，错误进日志文件）。
+    """
+    base_url = os.environ.get("MEMPOOL_BASE_URL", "http://127.0.0.1:8800")
+    try:
+        ensure_service(base_url)
+    except Exception:
+        # 日志已由 spawn/probe 路径落盘（MEMPOOL_DATA_ROOT/logs/server.log）
+        pass
+
+
+if __name__ == "__main__":
+    main()

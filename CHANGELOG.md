@@ -15,6 +15,14 @@
   - stdio 入口（`memorypool.mcp_server`）不受影响，五个 IDE 工具照旧
   - 新测试 `tests/test_mcp_http_endpoint.py`：无会话头 initialize / tools/list /
     写读闭环（注意 MCP SDK 自带 Host 头防护，测试须用回环 base_url）
+- **登录自启入口**（`memorypool/daemon.py` 新增 `main()`，
+  `pythonw -m memorypool.daemon`）：确保服务在跑后自身退出（常驻的是 spawn
+  出的服务进程），已就绪幂等直退、无窗口、失败静默进日志。给 Windows
+  HKCU Run 用——HTTP MCP 客户端（AgentClaw）只在自身启动时连一次 `/mcp`，
+  开机即在线才不会错过；本机已实测冷拉起（杀进程 → pythonw 入口 → health ok）
+- **bootstrap.ps1 第 5 步：自动注册登录自启**（`HKCU Run\AgentMemoryPool`，
+  `Set-ItemProperty` 幂等覆盖，路径带引号防空格；新增 `-SkipAutostart` 开关；
+  venv 无 pythonw 时跳过并提示）
 - **Windows 换机一键部署**（`scripts/bootstrap.ps1`，UTF-8 BOM 保证 PS 5.1 中文解析）：
   - venv 装依赖（优先 uv，退回 pip -e .）+ 生成 `~/.agent_memory_pool/.env` 模板
   - 自动检测 Cursor / Claude Code / Codex / Windsurf / Kiro 并逐个注册 MCP
@@ -28,6 +36,11 @@
 
 ### 文档
 
+- deployment.md 新增 **D 节「接入 AgentClaw 网关（HTTP MCP）」**：三步接入
+  （mcp-servers.json / agent 白名单 / personal 会话 per-tool 审查登记）+
+  启动顺序说明；B 节脚本步骤与参数表同步登录自启；README / SKILL /
+  api-reference 补 `/mcp` 端点章节；workflows.md 测试计数 65+10=75 并记
+  Windows pytest 临时根 PermissionError 的 `--basetemp` 绕法
 - 全量校订：workflows.md 测试计数改为 64+10=74；SKILL.md / README /
   workflows.md 补部署文档链接；SKILL.md MCP 支持清单扩为五工具；
   bootstrap.ps1 收尾提示的 user_id 示例通用化（不再硬编码个人 id）

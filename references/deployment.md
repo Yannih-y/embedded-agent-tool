@@ -69,7 +69,11 @@ powershell -ExecutionPolicy Bypass -File scripts\bootstrap.ps1 `
 
    JSON 写入带幂等守卫：已有同名同 command 的条目不重写文件，不碰其他 MCP server。
 4. **（可选）部署 nestwork 慢记忆**：见下节
-5. **冒烟测试**：SDK 自动拉起守护进程 + `/health` 检查（首次运行要下载
+5. **注册登录自启**：`HKCU Run\AgentMemoryPool → pythonw -m memorypool.daemon`
+   （无窗口，已就绪则幂等退出）。stdio MCP 客户端首次调用本就会自动拉起服务，
+   这一步是给 **HTTP MCP 客户端**（如 AgentClaw，见 D 节）兜底——它们只在
+   自己启动时连一次 `/mcp`，开机即在线才不会错过
+6. **冒烟测试**：SDK 自动拉起守护进程 + `/health` 检查（首次运行要下载
    embedding 模型，1~2 分钟属正常）
 
 ### 参数
@@ -79,6 +83,7 @@ powershell -ExecutionPolicy Bypass -File scripts\bootstrap.ps1 `
 | `-NestworkRemote <url>` | 空 | nestwork 仓库地址；不传且本机无 `~/nestwork` 则跳过慢记忆层 |
 | `-NestworkPath <path>` | `~/nestwork` | nestwork 本地克隆位置 |
 | `-SkipMcp` | 关 | 跳过 MCP 注册（只装依赖） |
+| `-SkipAutostart` | 关 | 跳过登录自启注册 |
 | `-SkipSmoke` | 关 | 跳过结尾冒烟测试 |
 
 ### 换机时随身带什么
@@ -124,6 +129,47 @@ Windows 下 `command` 是 `X:\\path\\to\\embedded-agent-tool\\.venv\\Scripts\\py
 
 > **user_id 约定**：`user_id` 是共享边界——同一个人在所有工具里统一用同一个
 > `user_id`，跨工具记忆才互通；`agent_id` 写各工具自己的名字留痕。
+
+## D. 接入 AgentClaw 网关（HTTP MCP）
+
+AgentClaw 这类自带安全边界的网关**不用 stdio**（其安全模型对带文件系统作用域
+的 agent 整类禁用 stdio MCP），改连服务进程自带的 streamable-http 端点
+`POST /mcp`（stateless + 纯 JSON 响应）。三步接入：
+
+1. **MCP 配置**（`<agentclaw>/data/mcp-servers.json`，运行时文件不入库）：
+
+   ```json
+   [
+     {
+       "name": "agent-memory-pool",
+       "transport": "http",
+       "url": "http://127.0.0.1:8800/mcp"
+     }
+   ]
+   ```
+
+2. **agent 工具白名单**（`data/agents/<agent>/config.json` 的 `tools` 数组）——
+   AgentClaw 每个 agent 只见白名单内工具：
+
+   ```json
+   "agent-memory-pool__search_memory",
+   "agent-memory-pool__add_memory"
+   ```
+
+3. **（要在 personal 会话用才需要）per-tool 审查登记**
+   （`data/reviewed-tool-capabilities.json` 的 `mcpTools` 数组，`server__tool`
+   全名 + `reviewedBy/reviewedAt` 留痕）：MCP 工具的类别兜底画像是
+   `maxInputClassification=public`，personal 及以上会话默认拒。登记
+   `maxInputClassification: "personal"` 后放行（sensitive 及以上仍拒）。
+
+配完 `powershell.exe -File restart.ps1 -NoBuild` 重启网关，日志见
+`[bootstrap] MCP server "agent-memory-pool" connected: 2 tools` 即通。
+
+**启动顺序**：AgentClaw 只在自己启动时连一次 `/mcp`，所以内存池要先在线——
+bootstrap.ps1 第 5 步的登录自启已兜底；手动装的跑一次
+`reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Run /v AgentMemoryPool /t REG_SZ /d "\"<venv>\Scripts\pythonw.exe\" -m memorypool.daemon" /f`。
+系统提示词建议补一段使用约定（内部记忆与共享池的分工 + `user_id`/`agent_id`
+约定），AgentClaw 的 `system-prompt.md` 有现成示例（「跨软件共享记忆池」小节）。
 
 ## 慢记忆层：nestwork（可选搭档）
 

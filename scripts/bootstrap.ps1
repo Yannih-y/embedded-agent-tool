@@ -13,12 +13,15 @@
 #   3. 自动检测本机装了哪些 agent 工具，逐个注册 MCP：
 #      Cursor / Claude Code / Codex / Windsurf / Kiro
 #   4. （可选）克隆 nestwork 慢记忆仓库并给上述工具装启动注入
-#   5. 冒烟测试：客户端自动拉起守护进程并 health 检查
+#   5. 注册登录自启（HKCU Run，pythonw 无窗口）：开机即在线，
+#      AgentClaw 等启动时连 /mcp 的 HTTP 客户端不依赖"谁先调用谁拉起"
+#   6. 冒烟测试：客户端自动拉起守护进程并 health 检查
 # -----------------------------------------------------------------------------
 param(
     [string] $NestworkRemote = "",
     [string] $NestworkPath = "$env:USERPROFILE\nestwork",
     [switch] $SkipMcp,
+    [switch] $SkipAutostart,
     [switch] $SkipSmoke
 )
 
@@ -201,14 +204,28 @@ if ($NestworkRemote -or (Test-Path $NestworkPath)) {
     Write-Skip "未指定 -NestworkRemote 且本机无 $NestworkPath，跳过慢记忆层"
 }
 
-# --- 5. 冒烟测试 ---------------------------------------------------------------
+# --- 5. 登录自启（HKCU Run，pythonw 无窗口，幂等覆盖） ---------------------------
+if (-not $SkipAutostart) {
+    Write-Step "注册登录自启"
+    $PythonW = Join-Path $RepoRoot ".venv\Scripts\pythonw.exe"
+    if (Test-Path $PythonW) {
+        Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' `
+            -Name 'AgentMemoryPool' -Value "`"$PythonW`" -m memorypool.daemon"
+        Write-Ok "HKCU Run\AgentMemoryPool -> pythonw -m memorypool.daemon（已就绪则幂等退出）"
+        $Summary.Add("autostart   : HKCU Run\AgentMemoryPool（登录即在线，AgentClaw 等启动时连 /mcp 不掉线）")
+    } else {
+        Write-Skip "venv 无 pythonw.exe，跳过自启（IDE 侧 stdio MCP 首次调用仍会自动拉起）"
+    }
+}
+
+# --- 6. 冒烟测试 ---------------------------------------------------------------
 if (-not $SkipSmoke) {
     Write-Step "冒烟测试（首次运行会下载本地 embedding 模型，可能要 1-2 分钟）"
     & $VenvPython -c "from memorypool.client_sdk import MemoryPoolClient; import json; print(json.dumps(MemoryPoolClient().health(), ensure_ascii=False))"
     Write-Ok "守护进程自动拉起 + health 通过"
 }
 
-# --- 6. 汇总 -------------------------------------------------------------------
+# --- 7. 汇总 -------------------------------------------------------------------
 Write-Step "部署完成"
 $Summary | ForEach-Object { Write-Host "  $_" }
 Write-Host @"

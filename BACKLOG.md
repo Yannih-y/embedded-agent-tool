@@ -43,7 +43,8 @@
 | 密钥一次配置 | `config.py` | `~/.agent_memory_pool/.env` 自动加载（setdefault，不覆盖已有环境变量） |
 | 测试数据隔离 | `tests/conftest.py` | 会话级临时数据目录；修掉「测试写真实数据目录 → 向量库滚雪球 → top-k 被挤占后检索归零」的随机挂 |
 | 换机一键部署 | `scripts/bootstrap.ps1` | 自动检测 Cursor/Claude Code/Codex/Windsurf/Kiro 注册 MCP + 可选 nestwork 慢记忆 + 冒烟测试；幂等重跑实测通过 |
-| HTTP MCP 端点 | `server.py` `mcp_server.py` | `/mcp` streamable-http（stateless+纯 JSON，进程内直连后端）；AgentClaw 网关双向实测（读回暗号 + 回写留痕 agent_id=agentclaw） |
+| HTTP MCP 端点 | `server.py` `mcp_server.py` | `/mcp` streamable-http（stateless+纯 JSON，进程内直连后端）；AgentClaw 网关双向实测（读回暗号 + 回写留痕 agent_id=agentclaw），personal 分级会话经审查登记放行后三路实测全通 |
+| 登录自启 | `daemon.py` `scripts/bootstrap.ps1` | `pythonw -m memorypool.daemon` 入口（确保在跑即退，无窗口幂等）；HKCU Run 注册（bootstrap 第 5 步自动写，`-SkipAutostart` 可关）；杀进程→冷拉起→health ok 实测 |
 
 ---
 
