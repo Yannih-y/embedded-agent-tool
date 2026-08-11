@@ -42,6 +42,7 @@
 | 零设置自动拉起 | `daemon.py` `client_sdk.py` | 连接被拒自动拉起后台服务再重试；probe 三态识别端口占用；竞态自愈；pidfile/日志落数据目录（真拉起实测） |
 | 密钥一次配置 | `config.py` | `~/.agent_memory_pool/.env` 自动加载（setdefault，不覆盖已有环境变量） |
 | 测试数据隔离 | `tests/conftest.py` | 会话级临时数据目录；修掉「测试写真实数据目录 → 向量库滚雪球 → top-k 被挤占后检索归零」的随机挂 |
+| 换机一键部署 | `scripts/bootstrap.ps1` | 自动检测 Cursor/Claude Code/Codex/Windsurf/Kiro 注册 MCP + 可选 nestwork 慢记忆 + 冒烟测试；幂等重跑实测通过 |
 
 ---
 

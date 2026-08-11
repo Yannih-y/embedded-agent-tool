@@ -11,6 +11,15 @@
   - 可选 `-NestworkRemote`：克隆 nestwork 慢记忆仓库并为检测到的工具装启动注入；
     自动修补 Claude Code hooks 的裸 `bash` 为 Git Bash 绝对路径（避开 WSL）
   - 结尾冒烟测试：SDK 自动拉起守护进程 + health 检查；全程幂等可重跑
+- **部署说明**（`references/deployment.md`）：三种部署路径（零设置单机 /
+  Windows 一键 / 手动逐工具）、五工具 MCP 配置位置表、nestwork 慢记忆层
+  分工与部署要点、换机数据迁移清单、部署后验证、故障排查表、卸载
+
+### 文档
+
+- 全量校订：workflows.md 测试计数改为 64+10=74；SKILL.md / README /
+  workflows.md 补部署文档链接；SKILL.md MCP 支持清单扩为五工具；
+  bootstrap.ps1 收尾提示的 user_id 示例通用化（不再硬编码个人 id）
 
 ## [0.2.0] - 2026-08-11
 

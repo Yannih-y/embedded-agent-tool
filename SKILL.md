@@ -48,6 +48,11 @@ cd embedded-agent-tool
 uv sync --extra dev          # 装依赖（含 pytest）
 ```
 
+Windows 换机 / 想把本机所有 agent 工具一次接完：跑
+`scripts/bootstrap.ps1`（自动检测 Cursor / Claude Code / Codex / Windsurf / Kiro
+并逐个注册 MCP，幂等可重跑），详见
+[references/deployment.md](references/deployment.md)。
+
 装完直接用——SDK / MCP 首次调用会自动拉起服务（零设置）。想手动管理也可以：
 
 ```bash
@@ -107,7 +112,7 @@ curl -X POST http://127.0.0.1:8800/search -H "Content-Type: application/json" -d
 }'
 ```
 
-### MCP（Claude Code / Cursor 等）
+### MCP（Cursor / Claude Code / Codex / Windsurf / Kiro 等）
 
 MCP 层是无状态薄代理，把工具调用转成 HTTP 打给服务进程。配完即用，
 不需要先起服务（首次工具调用自动拉起）：
@@ -194,6 +199,7 @@ result = await Orchestrator(agent_pool.as_dict()).run(tasks)
 
 | 主题 | 文件 |
 |------|------|
+| 部署说明（一键部署 / 五工具 MCP / 慢记忆层 / 排查） | [references/deployment.md](references/deployment.md) |
 | 架构与设计决策（分层/单写者/时间维度/关系表选型） | [references/architecture.md](references/architecture.md) |
 | API 参考（HTTP 端点 / MCP 工具 / Python 类） | [references/api-reference.md](references/api-reference.md) |
 | 工作流详解（协作链 / 固化 / TTL / 健康检查） | [references/workflows.md](references/workflows.md) |

@@ -98,6 +98,9 @@ report["usable"]                    # 真调通的模型列表
 
 ## 4. 部署形态
 
+> 完整部署路径（换机一键部署、五工具 MCP 配置、慢记忆层、故障排查）见
+> [deployment.md](deployment.md)；本节讲服务进程本身的形态。
+
 ### 零设置形态（默认，推荐）
 
 什么都不用起。第一个调用方（SDK / MCP 工具调用）发现服务没起，自动把
@@ -149,7 +152,7 @@ uv run python -m memorypool.server        # 唯一写者，独占 ~/.agent_memor
 | 真多厂家协作 + 内容承接 | `test_real_multi_agent.py` | 是（skipif 守卫） |
 | 真 LLM 全链路 e2e | `test_e2e_full_chain.py` | 是（skipif 守卫） |
 
-无 key 环境：60 passed + 10 skipped。有 key 全量约 68~80s。
+无 key 环境：64 passed + 10 skipped（共 74 个）。有 key 全量约 68~80s。
 
 ## 6. 诊断脚本（scripts/）
 

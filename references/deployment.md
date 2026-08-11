@@ -1,0 +1,185 @@
+# 部署说明
+
+从零到「五个 agent 工具共享同一份记忆」的完整路径。三种方式按需选：
+
+| 方式 | 适用场景 | 耗时 |
+|------|----------|------|
+| [A. 零设置单机](#a-零设置单机最小路径) | 只想让代码 / 某一个工具用上记忆池 | 1 分钟 |
+| [B. Windows 一键部署](#b-windows-一键部署推荐) | 新设备 / 换机，想把本机所有 agent 工具全接上 | 3 分钟 |
+| [C. 手动逐工具配置](#c-手动逐工具配置) | macOS / Linux，或只想接某几个工具 | 每工具 1 分钟 |
+
+## 前置要求
+
+- **git** + **Python >= 3.10**（推荐装 [uv](https://docs.astral.sh/uv/)，没有则退回 pip）
+- 磁盘约 500 MB（依赖 + 首次运行下载的本地 embedding 模型）
+- **不需要任何 API key**——本地写入/检索/共享完全离线；只有真 LLM 链路
+  （任务拆解 / 记忆固化 / 多厂家协作）才需要网关 key
+
+## A. 零设置单机（最小路径）
+
+```bash
+git clone https://github.com/Yannih-y/embedded-agent-tool.git
+cd embedded-agent-tool
+uv sync                      # 或：python -m venv .venv && .venv/Scripts/pip install -e .
+```
+
+装完即用。服务不用手动起——SDK / MCP 首次调用发现服务没起，自动拉起后台守护进程：
+
+```python
+from memorypool.client_sdk import MemoryPoolClient
+client = MemoryPoolClient()
+client.add("登录模块用 JWT", user_id="alice", agent_id="claude")
+```
+
+服务生命周期速查：
+
+```bash
+# 日志 / PID
+~/.agent_memory_pool/logs/server.log
+~/.agent_memory_pool/server.pid
+# 停服务
+kill $(cat ~/.agent_memory_pool/server.pid)            # POSIX
+taskkill /PID <server.pid 内容> /F                      # Windows
+```
+
+## B. Windows 一键部署（推荐）
+
+新设备克隆仓库后跑一条命令：
+
+```powershell
+git clone https://github.com/Yannih-y/embedded-agent-tool.git
+cd embedded-agent-tool
+powershell -ExecutionPolicy Bypass -File scripts\bootstrap.ps1 `
+    -NestworkRemote https://github.com/<you>/nestwork-private.git   # 慢记忆层，可省略
+```
+
+### 脚本做什么（全部幂等，重复跑安全）
+
+1. **装依赖**：优先 `uv sync`，无 uv 退回 `python -m venv` + `pip install -e .`
+2. **生成配置模板**：`~/.agent_memory_pool/.env`（已存在则不动）
+3. **自动检测并注册 MCP**：扫描本机装了哪些工具，装了哪个配哪个——
+
+   | 工具 | 检测依据 | 写入位置 |
+   |------|----------|----------|
+   | Cursor | `~/.cursor` 存在 | `~/.cursor/mcp.json` |
+   | Claude Code | `claude` CLI 可用 | `claude mcp add --scope user`（CLI 缺失时直写 `~/.claude.json`） |
+   | Codex | `~/.codex` 存在 | `~/.codex/config.toml` 追加 `[mcp_servers.agent_memory_pool]` |
+   | Windsurf | `~/.codeium/windsurf` 存在 | `~/.codeium/windsurf/mcp_config.json` |
+   | Kiro | `~/.kiro` 或 `%APPDATA%\kiro` 存在 | `~/.kiro/settings/mcp.json`（带 autoApprove） |
+
+   JSON 写入带幂等守卫：已有同名同 command 的条目不重写文件，不碰其他 MCP server。
+4. **（可选）部署 nestwork 慢记忆**：见下节
+5. **冒烟测试**：SDK 自动拉起守护进程 + `/health` 检查（首次运行要下载
+   embedding 模型，1~2 分钟属正常）
+
+### 参数
+
+| 参数 | 默认 | 说明 |
+|------|------|------|
+| `-NestworkRemote <url>` | 空 | nestwork 仓库地址；不传且本机无 `~/nestwork` 则跳过慢记忆层 |
+| `-NestworkPath <path>` | `~/nestwork` | nestwork 本地克隆位置 |
+| `-SkipMcp` | 关 | 跳过 MCP 注册（只装依赖） |
+| `-SkipSmoke` | 关 | 跳过结尾冒烟测试 |
+
+### 换机时随身带什么
+
+| 数据 | 怎么迁移 |
+|------|----------|
+| 密钥 `~/.agent_memory_pool/.env` | 手动拷贝一个文件（密钥永不进 git） |
+| 慢记忆（nestwork 仓库） | git 自动同步，换机即有——前提是远程建在**私有**仓库 |
+| 快记忆数据（faiss + SQLite） | 默认不迁移，新机从空池开始；急用：停服务后整目录拷 `~/.agent_memory_pool`（路线图 0.3.0 做 markdown 导出 + git 同步根治） |
+
+## C. 手动逐工具配置
+
+任何支持 MCP 的工具都认这个通用配置（把路径换成你的克隆位置）：
+
+```json
+{
+  "mcpServers": {
+    "agent-memory-pool": {
+      "command": "/path/to/embedded-agent-tool/.venv/bin/python",
+      "args": ["-m", "memorypool.mcp_server"]
+    }
+  }
+}
+```
+
+Windows 下 `command` 是 `X:\\path\\to\\embedded-agent-tool\\.venv\\Scripts\\python.exe`。
+也可以用 `uv run` 免关心 venv 路径：
+
+```json
+{
+  "command": "uv",
+  "args": ["run", "--directory", "/path/to/embedded-agent-tool",
+           "python", "-m", "memorypool.mcp_server"]
+}
+```
+
+各工具配置文件位置见上面 B 节的表格。配完重启工具即可（Kiro 热加载可不重启）。
+工具只有两个：`add_memory(content, user_id, agent_id?, tier?)`、
+`search_memory(query, user_id, limit?)`。
+
+> **user_id 约定**：`user_id` 是共享边界——同一个人在所有工具里统一用同一个
+> `user_id`，跨工具记忆才互通；`agent_id` 写各工具自己的名字留痕。
+
+## 慢记忆层：nestwork（可选搭档）
+
+内存池是**快记忆**（语义检索、TTL、LLM 固化），[nestwork](https://github.com/songth1ef/nestwork)
+是**慢记忆**（规则 / 偏好 / 项目状态，markdown + git，人可读可审计）。两层互补：
+
+| | 快记忆（本项目） | 慢记忆（nestwork） |
+|--|------|------|
+| 内容 | 协作产物、事实、上下文碎片 | 规则、偏好、战略、项目状态卡 |
+| 检索 | 向量语义检索 | 会话启动时全量注入 |
+| 同步 | 单机服务（0.3.0 计划 git 导出） | git push/pull，天然跨设备 |
+| 写入方 | 任何 agent 随时写 | 人写 queen/，agent 只写自己的 agents/ 目录 |
+
+部署要点：
+
+1. **远程必须是私有仓库**（里面是个人记忆）。GitHub 建私有仓库后把 url 传给
+   `bootstrap.ps1 -NestworkRemote`，或手动 `git clone <url> ~/nestwork`
+2. 各工具的启动注入由 nestwork 自带安装器完成（bootstrap.ps1 会代跑）：
+   Claude Code 走 hooks，Codex 走 `~/.codex/AGENTS.md`，Windsurf 注入
+   `global_rules.md`，Kiro 注入 `~/.kiro/steering/AGENTS.md`
+3. **Windows 特有补丁**（bootstrap.ps1 已自动处理）：Claude Code hooks 写的是裸
+   `bash`，Windows 上会命中 WSL 的 bash 导致 hook 失败；需替换成 Git Bash 绝对路径
+   （如 `C:/Program Files/Git/bin/bash.exe`）
+
+## 部署后验证
+
+```bash
+# 1. 服务与守护进程
+curl http://127.0.0.1:8800/health        # {"status":"ok","pool_ready":true,...}
+
+# 2. 跨工具共享：在工具 A 里种一条暗号
+#    「用 add_memory 记住：测试暗号是紫罗兰行动，user_id=<你的id>」
+# 3. 在工具 B 里检索
+#    「用 search_memory 查 user_id=<你的id> 的测试暗号」→ 应答出暗号
+```
+
+慢记忆验证：新开会话直接问「我的主项目是什么」，工具应不经介绍就答对
+（说明启动注入生效、它真的读了 nestwork）。
+
+## 故障排查
+
+| 现象 | 原因与解法 |
+|------|-----------|
+| MCP 工具在软件里不出现 | 没重启软件；Kiro 需确认设置里 MCP 开关已开；Windsurf 在 Cascade 的 Plugins/MCP 面板确认服务器已启用 |
+| 首次调用卡 1~2 分钟 | 正常：守护进程首次启动要下载本地 embedding 模型（之后秒起） |
+| `ForeignServiceError` | 8800 端口被别的服务占用。换端口：`.env` 里写 `MEMPOOL_PORT=8801`，MCP 配置加 `"env": {"MEMPOOL_BASE_URL": "http://127.0.0.1:8801"}` |
+| PowerShell 报一堆语法错/乱码 | 脚本被存成了无 BOM 的 UTF-8。仓库内的 `bootstrap.ps1` 自带 BOM；自己改动后保存时保持「UTF-8 with BOM」 |
+| nestwork 安装器报 `python3 not found` | Windows 的 `python3` 常是 WindowsApps 假名。bootstrap.ps1 已做会话内 `python3 → python` 别名兜底；手动跑时先 `Set-Alias python3 python` |
+| Claude Code hooks 无输出/报 WSL 错误 | 裸 `bash` 命中了 WSL。把 `~/.claude/settings.json` 里 hook 命令的 `bash` 换成 Git Bash 绝对路径（bootstrap.ps1 自动补） |
+| git 报 `dubious ownership` | 仓库目录属主与当前用户不一致。按 git 提示 `git config --global --add safe.directory <path>`，或单次 `git -c safe.directory=<path> ...` |
+| 记忆写进去查不到 | 检查两边 `user_id` 是否一致——检索只按 `user_id` 过滤 |
+
+## 卸载
+
+```bash
+# 1. 停服务
+kill $(cat ~/.agent_memory_pool/server.pid)      # Windows: taskkill /PID x /F
+# 2. 删数据（先备份！）
+rm -rf ~/.agent_memory_pool
+# 3. 各工具 MCP 配置里删掉 agent-memory-pool 条目
+# 4. nestwork：用其自带 scripts/uninstall/ 对应脚本
+```

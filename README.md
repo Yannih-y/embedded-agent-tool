@@ -59,6 +59,7 @@ powershell -ExecutionPolicy Bypass -File scripts\bootstrap.ps1 `
 
 脚本幂等，重复跑安全；结尾自带冒烟测试（客户端自动拉起守护进程 + health）。
 密钥不随仓库走：从旧设备拷 `~/.agent_memory_pool/.env` 一个文件即可。
+参数详解、手动逐工具配置、故障排查见 [references/deployment.md](references/deployment.md)。
 
 装完直接写代码——服务没起时首次调用**自动拉起**后台服务进程：
 
@@ -117,6 +118,7 @@ ANTHROPIC_BASE_URL=https://your-gateway.example.com
 | 文档 | 内容 |
 |------|------|
 | [SKILL.md](SKILL.md) | Agent Skill 定义：触发条件、接入方式、工作流、常见坑 |
+| [references/deployment.md](references/deployment.md) | 部署说明：一键部署、五工具 MCP 配置、慢记忆层、排查 |
 | [references/architecture.md](references/architecture.md) | 架构、模块地图、设计决策、并发模型 |
 | [references/api-reference.md](references/api-reference.md) | HTTP / MCP / Python API 全参考 |
 | [references/workflows.md](references/workflows.md) | 协作链、固化、TTL、健康检查、部署形态 |
