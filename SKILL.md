@@ -14,7 +14,7 @@ description: >
 license: MIT
 metadata:
   author: Yannih-y
-  version: "0.1.0"
+  version: "0.2.0"
   category: ai-memory
   tags: "memory, multi-agent, orchestration, mem0, faiss, mcp, fastapi"
 compatibility: >
@@ -37,27 +37,43 @@ faiss 是内存索引、写时整体落盘——两个进程同时打开同一�
 - Agent / MCP 客户端**永远不要**自己 `MemoryPool()` 直连数据文件
 - 一切读写走 HTTP（`client_sdk.MemoryPoolClient`）或 MCP（薄代理，转发 HTTP）
 - 只有 `memorypool.server` 这个服务进程持有 `MemoryPool` 实例
+- **服务不需要手动起**：客户端首次调用发现服务没起，自动把它拉起为后台
+  守护进程（`memorypool.daemon`），单写者铁律不变，只是「手动起」变「用时自动起」
 
-## 第一步：安装与启动
+## 第一步：安装（装完即用，不用起服务）
 
 ```bash
 git clone https://github.com/Yannih-y/embedded-agent-tool.git
 cd embedded-agent-tool
 uv sync --extra dev          # 装依赖（含 pytest）
+```
 
-# 起服务（默认 127.0.0.1:8800，数据落 ~/.agent_memory_pool）
-uv run python -m memorypool.server
+装完直接用——SDK / MCP 首次调用会自动拉起服务（零设置）。想手动管理也可以：
 
-# 健康检查
+```bash
+uv run python -m memorypool.server         # 手动起服务（可选）
 curl http://127.0.0.1:8800/health          # 轻量：服务 + 密钥状态
 curl http://127.0.0.1:8800/health/models   # 深度：逐个模型真实通路探针（慢）
+# 停自动拉起的服务：kill $(cat ~/.agent_memory_pool/server.pid)
+# Windows: taskkill /PID (type %USERPROFILE%\.agent_memory_pool\server.pid) /F
+```
+
+**密钥只有真 LLM 功能才需要**（任务拆解/记忆固化/多厂家协作）；存/读/共享**完全不用配**。
+要配也只配一次：写进 `~/.agent_memory_pool/.env`（自动加载，不覆盖已有环境变量）：
+
+```bash
+# ~/.agent_memory_pool/.env
+ANTHROPIC_AUTH_TOKEN=sk-xxx
+ANTHROPIC_BASE_URL=https://your-gateway.example.com
 ```
 
 环境变量（都有默认值，本地读写零配置可跑）：
 
 | 变量 | 作用 | 默认 |
 |------|------|------|
-| `MEMPOOL_DATA_ROOT` | 数据根目录（faiss + SQLite） | `~/.agent_memory_pool` |
+| `MEMPOOL_DATA_ROOT` | 数据根目录（faiss + SQLite + 日志 + pid） | `~/.agent_memory_pool` |
+| `MEMPOOL_HOST` / `MEMPOOL_PORT` | 服务监听地址（自动拉起也走这里） | `127.0.0.1` / `8800` |
+| `MEMPOOL_AUTOSTART_TIMEOUT` | 自动拉起等就绪的秒数（首次要加载模型） | `120` |
 | `MEMPOOL_EMBED_MODEL` / `MEMPOOL_EMBED_DIMS` | 本地 embedding 模型/维度 | `BAAI/bge-small-en-v1.5` / 384 |
 | `ANTHROPIC_AUTH_TOKEN` 或 `ANTHROPIC_API_KEY` | 聚合网关 key（一 key 通吃多厂家） | 无——缺了本地读写仍可用，云 LLM 链路失败 |
 | `ANTHROPIC_BASE_URL` | 聚合网关地址 | 无 |
@@ -65,6 +81,16 @@ curl http://127.0.0.1:8800/health/models   # 深度：逐个模型真实通路�
 | `MEMPOOL_BASE_URL` | MCP 薄代理指向的服务地址 | `http://127.0.0.1:8800` |
 
 ## 第二步：接入（三选一）
+
+### Python SDK（最省事：连服务都不用管）
+
+```python
+from memorypool.client_sdk import MemoryPoolClient
+
+client = MemoryPoolClient()   # 服务没起会自动拉起（auto_start 默认开）
+client.add("任务[t1]产出：登录模块用 JWT", user_id="alice", agent_id="claude", run_id="run_001")
+hits = client.search("登录方案", user_id="alice")
+```
 
 ### HTTP（任意语言的 Agent 进程）
 
@@ -83,7 +109,8 @@ curl -X POST http://127.0.0.1:8800/search -H "Content-Type: application/json" -d
 
 ### MCP（Claude Code / Cursor 等）
 
-MCP 层是无状态薄代理，把工具调用转成 HTTP 打给服务进程。先起服务，再配：
+MCP 层是无状态薄代理，把工具调用转成 HTTP 打给服务进程。配完即用，
+不需要先起服务（首次工具调用自动拉起）：
 
 ```json
 {
@@ -100,16 +127,6 @@ MCP 层是无状态薄代理，把工具调用转成 HTTP 打给服务进程。�
 
 工具两个：`add_memory(content, user_id, agent_id?, tier?)`、
 `search_memory(query, user_id, limit?)`。
-
-### Python SDK（进程内最薄封装）
-
-```python
-from memorypool.client_sdk import MemoryPoolClient
-
-client = MemoryPoolClient("http://127.0.0.1:8800")
-client.add("任务[t1]产出：...", user_id="alice", agent_id="claude", run_id="run_001")
-hits = client.search("登录方案", user_id="alice")
-```
 
 ## 核心概念速查
 

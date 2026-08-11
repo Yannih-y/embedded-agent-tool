@@ -1,6 +1,6 @@
 [project]
 name = "agent-memory-pool"
-version = "0.1.0"
+version = "0.2.0"
 description = "多Agent共享内存池：打通不同厂家AI交互壁垒，独立服务进程 + 分层记忆"
 requires-python = ">=3.10,<3.15"
 dependencies = [

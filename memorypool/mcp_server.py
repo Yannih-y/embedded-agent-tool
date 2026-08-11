@@ -13,6 +13,9 @@ MCP 走 stdio 传输，必然由 Claude Code / Cursor 拉起成**独立子进程
 - HTTP（server.py）：唯一持有 MemoryPool、独占数据库文件的进程
 - MCP（本文件）：无状态代理，经 MemoryPoolClient 转发
 
+零设置：MemoryPoolClient 默认 auto_start——服务没起时第一次工具调用会自动
+把服务拉起为后台守护进程（memorypool.daemon），用户不需要手动起服务。
+
 真实 API（已实测 mcp 1.22.0）：
 - FastMCP(name) 构造；@mcp.tool() 装饰器注册；mcp.run(transport='stdio') 启动
 - await mcp.list_tools() 列已注册工具

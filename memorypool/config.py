@@ -14,6 +14,30 @@ os.environ.setdefault("MEM0_TELEMETRY", "false")
 os.environ.setdefault("MEM0_TELEMETRY_ENABLED", "false")
 os.environ.setdefault("POSTHOG_DISABLED", "true")
 
+
+def _load_env_file() -> None:
+    """把 ~/.agent_memory_pool/.env（若存在）里的 KEY=VALUE 注入环境，不覆盖已有值。
+
+    让密钥「配一次永远生效」：不依赖 shell profile / 每次 export，也不引入
+    dotenv 依赖。daemon 自动拉起的服务进程同样走这里，密钥天然带上。
+    """
+    root = Path(os.environ.get("MEMPOOL_DATA_ROOT", Path.home() / ".agent_memory_pool"))
+    candidate = root / ".env"
+    if not candidate.is_file():
+        return
+    try:
+        for line in candidate.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+    except OSError:
+        pass  # .env 读不了就当没有，不拦启动
+
+
+_load_env_file()
+
 # 数据根目录：所有嵌入式库的文件都落在这里，服务进程独占
 DATA_ROOT = Path(os.environ.get("MEMPOOL_DATA_ROOT", Path.home() / ".agent_memory_pool"))
 DATA_ROOT.mkdir(parents=True, exist_ok=True)

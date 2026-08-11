@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.2.0] - 2026-08-11
+
+零设置体验：装完即用，不用手动起服务，密钥只配一次（或完全不配）。
+
+### 新增
+
+- **服务自动拉起**（`memorypool/daemon.py`）：客户端连接被拒时自动把
+  `memorypool.server` 拉起为后台守护进程（Windows 无窗口独立进程组 /
+  POSIX new session），等 `/health` 就绪后重试原请求
+  - 端口被非内存池服务占用能识别（`ForeignServiceError`），不往陌生服务写数据
+  - 并发竞态自愈：多客户端同时拉起只活一个，输家自动退出，调用方无感
+  - 只代管本机回环地址；启动失败/超时报错附日志尾部
+  - 日志落 `MEMPOOL_DATA_ROOT/logs/server.log`，PID 落 `MEMPOOL_DATA_ROOT/server.pid`
+- **`MemoryPoolClient(auto_start=True)`**（默认开）：SDK / MCP 薄代理零设置接入；
+  `health()` 保持纯探活不触发拉起
+- **密钥一次配置**：`~/.agent_memory_pool/.env` 自动加载（setdefault 语义，
+  不覆盖已有环境变量，无第三方依赖）；本地存/读/共享本就无需密钥
+- **`MEMPOOL_HOST` / `MEMPOOL_PORT`**：服务监听地址环境变量（手动/自动启动都认）；
+  `MEMPOOL_AUTOSTART_TIMEOUT` 控制等就绪超时（默认 120s）
+- 新增 4 个测试：零设置端到端（真拉起真检索）、probe 三态、远程地址拒绝、.env 加载
+
+### 修复
+
+- **测试套件数据隔离**（`tests/conftest.py`）：全套件改用独立临时数据目录。
+  此前测试直接写用户真实的 `~/.agent_memory_pool`，向量库随历史测试运行滚雪球，
+  faiss 先取 top-k 再按 user 过滤导致检索被历史数据挤占、用例开始随机挂（已实测复现）；
+  同时避免测试垃圾污染真实记忆库
+
 ## [0.1.0] - 2026-08-11
 
 首个开源版本（技术验证阶段）。

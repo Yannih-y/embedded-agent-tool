@@ -6,6 +6,7 @@
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -124,7 +125,10 @@ async def search(req: SearchRequest):
 def main():
     import uvicorn
 
-    uvicorn.run(app, host="127.0.0.1", port=8800)
+    # daemon 自动拉起时经这两个环境变量传监听地址；手动起服务也可用它们改端口
+    host = os.environ.get("MEMPOOL_HOST", "127.0.0.1")
+    port = int(os.environ.get("MEMPOOL_PORT", "8800"))
+    uvicorn.run(app, host=host, port=port)
 
 
 if __name__ == "__main__":

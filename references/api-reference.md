@@ -69,11 +69,29 @@
 ### `client_sdk.MemoryPoolClient`（Agent 侧，跨进程）
 
 ```python
-MemoryPoolClient(base_url="http://127.0.0.1:8800", timeout=30.0)
+MemoryPoolClient(base_url="http://127.0.0.1:8800", timeout=30.0, auto_start=True)
 .add(content, user_id, agent_id=None, run_id=None, tier=Tier.REALTIME) -> dict
 .search(query, user_id, limit=10) -> dict
-.health() -> dict
+.health() -> dict   # 纯探活，不触发自动拉起
 ```
+
+- `auto_start=True`（默认）：连接被拒时自动拉起服务（见 daemon）后重试一次；
+  只对「连接不上」触发，不吞其它 HTTP 错误
+- `auto_start=False`：连接失败直接抛 `httpx.ConnectError`（想自己管服务生命周期时用）
+
+### `daemon`（零设置自动拉起）
+
+```python
+daemon.probe(base_url) -> "ready" | "foreign" | "down"   # 探服务状态
+daemon.ensure_service(base_url, timeout=120) -> int | None
+# 没起 → 拉起后台守护进程并等 /health 就绪，返回新进程 PID；已就绪 → None
+# 端口被非内存池服务占用 → ForeignServiceError；启动失败/超时 → 附日志尾部报错
+```
+
+- 只代管本机回环地址（127.0.0.1/localhost/::1），远程 base_url 不拉起
+- 竞态自愈：两个客户端同时拉起，抢输端口的 uvicorn 自己退出，健康探测照样变绿
+- 日志落 `MEMPOOL_DATA_ROOT/logs/server.log`，PID 落 `MEMPOOL_DATA_ROOT/server.pid`
+- 等就绪超时由 `MEMPOOL_AUTOSTART_TIMEOUT` 控制（默认 120s，首次要加载 embedding 模型）
 
 ### `pool.MemoryPool`（仅服务进程内实例化）
 

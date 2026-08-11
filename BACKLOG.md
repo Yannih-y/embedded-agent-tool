@@ -9,9 +9,12 @@
 
 ## 一、当前状态总览
 
-- **70 个测试**（`pytest`，单一 `.venv`；无云 key 时 60 passed + 10 skipped——真
-  LLM / 真网关用例带 skipif 守卫，有 key 时全量跑）
+- **74 个测试**（`pytest`，单一 `.venv`；无云 key 时 64 passed + 10 skipped——真
+  LLM / 真网关用例带 skipif 守卫，有 key 时全量跑；conftest 会话级临时数据目录，
+  测试不碰真实记忆库）
 - 核心机制、真多厂家协作、跨进程 HTTP、健康检查、并发——都已实测验证
+- **零设置可用（0.2.0）**：不用手动起服务（客户端首次调用自动拉起后台守护进程），
+  密钥只有真 LLM 功能需要且可写 `~/.agent_memory_pool/.env` 一次配置
 - **仓库已自包含**：`mem0ai` 从本地路径依赖切换为 PyPI 固定版 `mem0ai==2.0.13`
   （与本地验证的 v2.0.13 克隆逐字节一致，已重跑测试确认），可独立克隆构建；
   已作为开源仓库发布（含 SKILL.md + references/ 打包）
@@ -36,6 +39,9 @@
 | 真多厂家 Agent | `real_agent.py` | claude + gpt 真协作；**内容承接实测**（暗号验下游真读上游） |
 | 健康检查 | `health_check.py` | 密钥校验（401/missing/ok）+ 模型通路并发探针；接进服务 lifespan + `/health` `/health/models` |
 | 并发 | `server.py` | `run_in_threadpool` 修掉 async 端点同步阻塞；并发不再退化成串行 |
+| 零设置自动拉起 | `daemon.py` `client_sdk.py` | 连接被拒自动拉起后台服务再重试；probe 三态识别端口占用；竞态自愈；pidfile/日志落数据目录（真拉起实测） |
+| 密钥一次配置 | `config.py` | `~/.agent_memory_pool/.env` 自动加载（setdefault，不覆盖已有环境变量） |
+| 测试数据隔离 | `tests/conftest.py` | 会话级临时数据目录；修掉「测试写真实数据目录 → 向量库滚雪球 → top-k 被挤占后检索归零」的随机挂 |
 
 ---
 
@@ -90,11 +96,11 @@
 # 环境（uv 管理，工程根有 .venv）
 uv sync --extra dev
 
-# 全量测试（有云 key 含真 LLM/真起进程慢用例约 80s；无 key 60 passed + 10 skipped）
+# 全量测试（有云 key 含真 LLM/真起进程慢用例约 80s；无 key 64 passed + 10 skipped）
 .venv/Scripts/python -m pytest -q
 
-# 起服务
-.venv/Scripts/python -m memorypool.server   # 默认 127.0.0.1:8800
+# 起服务（可选——客户端首次调用会自动拉起，见 daemon.py）
+.venv/Scripts/python -m memorypool.server   # 默认 127.0.0.1:8800，MEMPOOL_HOST/PORT 可改
 
 # 健康检查
 curl http://127.0.0.1:8800/health          # 轻量：服务 + 密钥状态

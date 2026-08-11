@@ -38,33 +38,48 @@ Agent A(claude)   Agent B(gpt)   Claude Code/Cursor
 fastembed 本地 embedding（写入/检索**离线可用**），SQLite 三元组表做长期记忆关系
 （评估后弃用图数据库——复杂度配不上价值），FastAPI 服务 + MCP 薄代理。
 
-## 快速开始
+## 快速开始（零设置：不用起服务，不用配密钥）
 
 ```bash
 git clone https://github.com/Yannih-y/embedded-agent-tool.git
 cd embedded-agent-tool
 uv sync --extra dev
+```
 
-# 起服务（默认 127.0.0.1:8800，数据落 ~/.agent_memory_pool）
-uv run python -m memorypool.server
+装完直接写代码——服务没起时首次调用**自动拉起**后台服务进程：
 
-# 写一条记忆
+```python
+from memorypool.client_sdk import MemoryPoolClient
+
+client = MemoryPoolClient()                                # 不用手动起服务
+client.add("登录模块用 JWT", user_id="alice", agent_id="claude")
+hits = client.search("登录方案", user_id="alice")           # 另一个 Agent 同 user 可读
+```
+
+HTTP 口子同样可用（服务被自动拉起后就是普通 FastAPI）：
+
+```bash
 curl -X POST http://127.0.0.1:8800/add -H "Content-Type: application/json" \
   -d '{"messages":"登录模块用 JWT","user_id":"alice","agent_id":"claude"}'
-
-# 另一个 Agent 检索（同 user 互相可读）
 curl -X POST http://127.0.0.1:8800/search -H "Content-Type: application/json" \
   -d '{"query":"登录方案","user_id":"alice"}'
 ```
 
-本地读写零配置可跑。要用真 LLM 链路（任务拆解 / 记忆固化 / 多厂家协作），配聚合网关：
+本地写入/检索/共享**不需要任何密钥**。只有真 LLM 链路（任务拆解 / 记忆固化 /
+多厂家协作）才要网关 key，且只需配一次——写进 `~/.agent_memory_pool/.env` 自动加载：
 
 ```bash
-export ANTHROPIC_AUTH_TOKEN=sk-xxx        # 或 ANTHROPIC_API_KEY
-export ANTHROPIC_BASE_URL=https://your-gateway.example.com
+# ~/.agent_memory_pool/.env
+ANTHROPIC_AUTH_TOKEN=sk-xxx
+ANTHROPIC_BASE_URL=https://your-gateway.example.com
 ```
 
+停掉自动拉起的服务：`kill $(cat ~/.agent_memory_pool/server.pid)`
+（Windows：`taskkill /PID <server.pid 内容> /F`）；日志在 `~/.agent_memory_pool/logs/server.log`。
+
 ### 接入 Claude Code / Cursor（MCP）
+
+配完即用，不需要先起服务（首次工具调用自动拉起）：
 
 ```json
 {
@@ -80,7 +95,8 @@ export ANTHROPIC_BASE_URL=https://your-gateway.example.com
 ```
 
 > 铁律：数据库只有一个写者（服务进程）。MCP 层是无状态薄代理，一切经 HTTP 转发——
-> 两个进程同开一份 faiss 会静默丢数据。
+> 两个进程同开一份 faiss 会静默丢数据。自动拉起不破坏这条：数据的主人永远只有
+> 一个服务进程，变的只是它由谁、何时启动。
 
 ## 文档
 
@@ -96,8 +112,9 @@ export ANTHROPIC_BASE_URL=https://your-gateway.example.com
 
 ```bash
 uv run pytest -q
-# 无云 key：60 passed + 10 skipped（真 LLM 用例自动跳过）
-# 有云 key：全量 70 个，含真多厂家协作/真起进程/并发压测，约 80s
+# 无云 key：64 passed + 10 skipped（真 LLM 用例自动跳过）
+# 有云 key：全量 74 个，含真多厂家协作/真起进程/自动拉起/并发压测，约 80s
+# 测试套件用独立临时数据目录，不会碰 ~/.agent_memory_pool 里的真实数据
 ```
 
 ## 当前状态与路线图

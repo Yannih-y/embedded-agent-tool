@@ -98,7 +98,23 @@ report["usable"]                    # 真调通的模型列表
 
 ## 4. 部署形态
 
-### 单机标准形态
+### 零设置形态（默认，推荐）
+
+什么都不用起。第一个调用方（SDK / MCP 工具调用）发现服务没起，自动把
+`memorypool.server` 拉起为后台守护进程，之后所有调用方复用同一个服务：
+
+```python
+from memorypool.client_sdk import MemoryPoolClient
+client = MemoryPoolClient()      # 服务没起就自动拉起，起了就直接用
+```
+
+- 日志：`~/.agent_memory_pool/logs/server.log`；PID：`~/.agent_memory_pool/server.pid`
+- 停服务：`kill $(cat ~/.agent_memory_pool/server.pid)`（Windows `taskkill /PID x /F`）
+- 并发竞态自愈：多个客户端同时拉起也只会活一个（端口独占，输家自己退出）
+- 密钥（仅真 LLM 功能需要）写 `~/.agent_memory_pool/.env` 一次即可，
+  自动拉起的服务进程同样会加载
+
+### 单机手动形态（想自己管生命周期）
 
 ```
 uv run python -m memorypool.server        # 唯一写者，独占 ~/.agent_memory_pool
@@ -106,8 +122,8 @@ uv run python -m memorypool.server        # 唯一写者，独占 ~/.agent_memor
 
 - 任意数量 Agent 进程经 HTTP 接入（`MemoryPoolClient` 或裸 httpx）
 - 任意数量 MCP 客户端经 `memorypool.mcp_server` 薄代理接入
-- 换数据目录：`MEMPOOL_DATA_ROOT=/path/to/data`；换端口：
-  `uvicorn memorypool.server:app --host 127.0.0.1 --port 9000`
+- 换数据目录：`MEMPOOL_DATA_ROOT=/path/to/data`；换监听地址：
+  `MEMPOOL_HOST` / `MEMPOOL_PORT`（自动拉起与手动启动都认）
 
 ### 禁止形态
 
