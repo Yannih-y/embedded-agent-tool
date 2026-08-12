@@ -45,8 +45,13 @@ class MemoryPool:
     ) -> dict:
         """写一条记忆。实时层 infer=False 老实存，打 tier 标记，agent_id 留痕。
 
+        写前过内容审查（唯一写入闸口，REST / MCP / SDK / 内部固化全走这里）：
+        检索结果会进每个 agent 上下文，注入与凭证在写入面拦截，见 content_guard。
         持写锁：faiss 单写者约束，见 __init__ 说明。
         """
+        from memorypool.content_guard import ensure_clean
+
+        ensure_clean(content)
         with self._write_lock:
             return self._mem.add(
                 content,

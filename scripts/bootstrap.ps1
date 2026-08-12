@@ -221,8 +221,9 @@ if (-not $SkipAutostart) {
 # --- 6. 冒烟测试 ---------------------------------------------------------------
 if (-not $SkipSmoke) {
     Write-Step "冒烟测试（首次运行会下载本地 embedding 模型，可能要 1-2 分钟）"
-    & $VenvPython -c "from memorypool.client_sdk import MemoryPoolClient; import json; print(json.dumps(MemoryPoolClient().health(), ensure_ascii=False))"
-    Write-Ok "守护进程自动拉起 + health 通过"
+    # health() 是纯探活不拉起，必须先 ensure_service（新机器上服务必然没起）
+    & $VenvPython -c "from memorypool.daemon import ensure_service; from memorypool.client_sdk import MemoryPoolClient; import json; ensure_service('http://127.0.0.1:8800'); print(json.dumps(MemoryPoolClient().health(), ensure_ascii=False))"
+    Write-Ok "守护进程拉起 + health 通过"
 }
 
 # --- 7. 汇总 -------------------------------------------------------------------

@@ -82,10 +82,29 @@ def _port_open(host: str, port: int) -> bool:
         return False
 
 
+_LOG_ROTATE_BYTES = 5 * 1024 * 1024
+
+
+def _rotate_log_if_large(log_path: Path) -> None:
+    """启动时轮转超限日志（保留一代 .1）。
+
+    服务进程持有日志句柄，运行中轮转在 Windows 上不可靠；日志只在服务重启时
+    换代，配合无限增长兜底够用——服务是常驻守护进程，重启频率低，单代 5MB 封顶。
+    """
+    try:
+        if log_path.exists() and log_path.stat().st_size > _LOG_ROTATE_BYTES:
+            backup = log_path.with_suffix(".log.1")
+            backup.unlink(missing_ok=True)
+            log_path.rename(backup)
+    except OSError:
+        pass  # 轮转失败不阻断启动（如旧进程尚持有句柄）
+
+
 def spawn_server(host: str, port: int) -> subprocess.Popen:
     """把服务进程作为后台守护进程拉起（脱离当前进程生命周期），日志/pid 落数据目录。"""
     log_path = _log_path()
     log_path.parent.mkdir(parents=True, exist_ok=True)
+    _rotate_log_if_large(log_path)
     log = open(log_path, "ab")
     env = {**os.environ, "MEMPOOL_HOST": host, "MEMPOOL_PORT": str(port)}
     kwargs: dict = {

@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.10", "3.12"]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    env:
+      # 固定 embedding 模型缓存位置以便跨 run 复用（bge-small-zh ~55MB）
+      FASTEMBED_CACHE_PATH: ${{ github.workspace }}/.fastembed-cache
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Cache embedding model
+        uses: actions/cache@v4
+        with:
+          path: .fastembed-cache
+          key: fastembed-${{ runner.os }}-bge-small-zh-v1.5
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Shell syntax check (bootstrap.sh)
+        if: runner.os == 'Linux'
+        run: bash -n scripts/bootstrap.sh
+
+      - name: Run tests (no cloud key; real-LLM cases auto-skip)
+        run: uv run pytest -q

@@ -160,12 +160,21 @@ class SearchRequest(BaseModel):
 
 @app.get("/health")
 async def health():
-    """轻量健康探针：服务活着 + 密钥自检状态（启动时查的，不重探，快）。"""
+    """轻量健康探针：服务活着 + 密钥自检状态（启动时查的，不重探，快）。
+
+    version / embed_model 供监控与迁移核验（换机后一眼确认跑的是哪个版本、
+    哪个 embedding——错模型直接查会失真，见 scripts/reembed.py）。
+    """
+    from memorypool import __version__
+    from memorypool.config import EMBED_MODEL
+
     pool_ready = _pool is not None
     key = _key_check
     return {
         "status": "ok" if pool_ready else "starting",
         "pool_ready": pool_ready,
+        "version": __version__,
+        "embed_model": EMBED_MODEL,
         "key_status": key.status.value if key else "unknown",
         "key_detail": key.detail if key else "",
     }
@@ -190,15 +199,22 @@ async def health_models():
 
 @app.post("/add")
 async def add(req: AddRequest):
+    from fastapi import HTTPException
+
+    from memorypool.content_guard import ContentRejected
+
     pool = get_pool()
-    return await run_in_threadpool(
-        pool.add,
-        req.messages,
-        user_id=req.user_id,
-        agent_id=req.agent_id,
-        run_id=req.run_id,
-        tier=Tier(req.tier),
-    )
+    try:
+        return await run_in_threadpool(
+            pool.add,
+            req.messages,
+            user_id=req.user_id,
+            agent_id=req.agent_id,
+            run_id=req.run_id,
+            tier=Tier(req.tier),
+        )
+    except ContentRejected as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.post("/search")

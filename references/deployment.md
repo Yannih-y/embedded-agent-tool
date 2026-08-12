@@ -1,4 +1,4 @@
-# 部署说明
+﻿# 部署说明
 
 从零到「五个 agent 工具 + AgentClaw 共享同一份记忆」的完整路径。
 装完后的**日常用法**（约定、话术、场景）见 [usage.md](usage.md)。
@@ -7,7 +7,8 @@
 |------|----------|------|
 | [A. 零设置单机](#a-零设置单机最小路径) | 只想让代码 / 某一个工具用上记忆池 | 1 分钟 |
 | [B. Windows 一键部署](#b-windows-一键部署推荐) | 新设备 / 换机，想把本机所有 agent 工具全接上 | 3 分钟 |
-| [C. 手动逐工具配置](#c-手动逐工具配置) | macOS / Linux，或只想接某几个工具 | 每工具 1 分钟 |
+| [B2. macOS / Linux 一键部署](#b2-macos--linux-一键部署) | 同上，POSIX 平台（`bootstrap.sh`） | 3 分钟 |
+| [C. 手动逐工具配置](#c-手动逐工具配置) | 不想跑脚本，或只想接某几个工具 | 每工具 1 分钟 |
 | [D. 接入 AgentClaw](#d-接入-agentclaw-网关http-mcp) | 个人 AI 网关走 HTTP MCP | 2 分钟 |
 
 ## 前置要求
@@ -94,10 +95,25 @@ powershell -ExecutionPolicy Bypass -File scripts\bootstrap.ps1 `
 |------|----------|
 | 密钥 `~/.agent_memory_pool/.env` | 手动拷贝一个文件（密钥永不进 git） |
 | 慢记忆（nestwork 仓库） | git 自动同步，换机即有——前提是远程建在**私有**仓库 |
-| 快记忆数据（faiss + SQLite） | 默认不迁移，新机从空池开始；急用：停服务后整目录拷 `~/.agent_memory_pool`（路线图 0.3.0 做 markdown 导出 + git 同步根治） |
+| 快记忆数据（faiss + SQLite） | 默认不迁移，新机从空池开始；急用：停服务后整目录拷 `~/.agent_memory_pool`（路线图 0.4.0 做 markdown 导出 + git 同步根治） |
 
 > 小技巧：把带你真实仓库地址的完整换机命令存进**私有** nestwork 仓库的
 > `DEPLOY.md`——新设备登录 GitHub 打开该页即可复制；公开仓库的文档里只留占位符。
+
+## B2. macOS / Linux 一键部署
+
+```bash
+git clone https://github.com/Yannih-y/embedded-agent-tool.git
+cd embedded-agent-tool
+bash scripts/bootstrap.sh          # --skip-mcp / --skip-autostart / --skip-smoke 可选
+```
+
+与 Windows 版对应：装依赖（uv 优先）→ `.env` 模板 → 检测到的工具逐个注册 MCP
+（Cursor / Claude Code / Codex / Windsurf / Kiro，JSON 合并幂等）→ 登录自启
+（Linux `systemd --user` 单元 / macOS LaunchAgent）→ 冒烟测试。
+
+> 首版脚本（本项目主力机是 Windows），CI 只做语法检查——真机跑出问题请开 issue。
+> nestwork 慢记忆层在 POSIX 上直接用其自带安装器，无需本脚本代跑。
 
 ## C. 手动逐工具配置
 
@@ -182,7 +198,7 @@ bootstrap.ps1 第 5 步的登录自启已兜底；手动装的跑一次
 |--|------|------|
 | 内容 | 协作产物、事实、上下文碎片 | 规则、偏好、战略、项目状态卡 |
 | 检索 | 向量语义检索 | 会话启动时全量注入 |
-| 同步 | 单机服务（0.3.0 计划 git 导出） | git push/pull，天然跨设备 |
+| 同步 | 单机服务（0.4.0 计划 git 导出） | git push/pull，天然跨设备 |
 | 写入方 | 任何 agent 随时写 | 人写 queen/，agent 只写自己的 agents/ 目录 |
 
 部署要点：

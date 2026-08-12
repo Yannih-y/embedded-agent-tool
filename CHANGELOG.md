@@ -1,6 +1,41 @@
 # Changelog
 
-## [Unreleased]
+## [0.3.0] - 2026-08-12
+
+产品化发布：安全（写入审查 + Host 防护）、跨平台（bootstrap.sh）、CI、
+中文检索（embedding en→zh，**破坏性变更需迁移**）、运维（自启/轮转/健康信息）。
+路线图调整：「markdown 导出 + git 同步」原占 0.3.0 号，改排 **0.4.0**
+（设计决议不变，见 BACKLOG P1）。
+
+### 新增（0.3.0 产品化批次）
+
+- **写入内容审查**（`memorypool/content_guard.py`，闸口在 `pool.add`——REST /
+  MCP / SDK / 内部固化全走这里）：三类命中即拒（fail-closed）——命令式提示注入
+  （中英，模式刻意收窄不拦"角色扮演"类描述转述，防误杀会议记录）、隐形 unicode
+  （零宽/bidi 控制符）、高置信凭证（sk-/ghp_/AKIA/xox/私钥块，强制兜底「不写
+  密码 token」约定）。REST 返回 400 + 原因；新增 18 个测试用例（9 恶意样本 +
+  7 条按池内真实记忆风格写的合法样本防误杀 + REST 400/200 集成）
+- **macOS / Linux 一键部署**（`scripts/bootstrap.sh`）：uv/venv 装依赖、.env
+  模板、五工具 MCP 注册（JSON 合并幂等）、登录自启（Linux systemd --user /
+  macOS LaunchAgent）、冒烟测试；CI 里做 bash 语法检查。**首版未在真机全流程
+  实测**（本机为 Windows），欢迎反馈
+- **GitHub Actions CI**（`.github/workflows/ci.yml`）：ubuntu + windows ×
+  Python 3.10/3.12 矩阵，无云 key 跑全量（真 LLM 用例自动跳过），embedding
+  模型按 OS 缓存
+- **SECURITY.md**：威胁模型（信任边界表）、数据事实（不加密/凭证拒收/user_id
+  非安全边界）、部署红线（禁 0.0.0.0 裸奔、ALLOWED_HOSTS 须配网络层访问控制）
+- **`/health` 暴露 `version` + `embed_model`**：监控与迁移核验（换机一眼确认
+  版本与 embedding 是否正确，错模型直接查会失真）
+- **日志轮转**：daemon 启动时超 5MB 轮转（保留一代 `.log.1`；运行中轮转在
+  Windows 上因句柄占用不可靠，服务重启频率低，启动时轮转够用）
+- **pip 入口点**：`mempool-server` / `mempool-daemon` / `mempool-mcp`
+  （`pip install` 后免记 `python -m` 路径）
+
+### 修复
+
+- **两个 bootstrap 的冒烟测试在全新机器上必然失败**：`health()` 是纯探活
+  不触发自动拉起（设计如此），脚本却直接调它并宣称"自动拉起 + health 通过"
+  ——本机跑通纯属服务恰好在跑。改为显式 `ensure_service()` 后再探活
 
 ### 变更（重要：默认 embedding 模型 en → zh，需迁移）
 
@@ -38,8 +73,9 @@
   零散写入的记忆不会被自动固化或清理。SKILL / workflows / README 三处已改为
   实话并标注现状；BACKLOG 立项「服务进程接入固化/TTL 调度」（显式配置默认关，
   需先定义工作流记忆豁免规则，防止把圆桌记录/任务书归纳掉破坏「会后任查」）
-- BACKLOG 新增 P1：写入内容注入审查（参照 AgentClaw scanMemoryContent）；
-  备份优先级提升（0.3.0 导出本质是备份，提到写锁优化之前）
+- BACKLOG 新增 P1：写入内容注入审查（参照 AgentClaw scanMemoryContent，
+  本版已落地为 content_guard）；备份优先级提升（0.4.0 导出本质是备份，
+  提到写锁优化之前）
 - usage.md 任务交接协议补**认领语义**：接活前先查重并写「已认领 <run_id>」，
   防两个会话重复接同一任务书
 
@@ -77,7 +113,8 @@
 
 ### 文档
 
-- **0.3.0「markdown 导出 + git 同步」设计定稿**（BACKLOG P1 新节）：由跨厂家
+- **「markdown 导出 + git 同步」设计定稿**（原编号 0.3.0，现改排 0.4.0；
+  BACKLOG P1 新节）：由跨厂家
   圆桌会议产出——主持 cursor + 成员 AgentClaw default / hermes 两个独立 LLM
   agent，两轮制（独立发言 + 交叉质询），全程留痕共享池
   `run_id=roundtable-20260812-mempool030`。决议：按 user 聚合单文件、单向导出、

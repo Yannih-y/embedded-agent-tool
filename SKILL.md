@@ -5,16 +5,17 @@ description: >
   Lets independent agent processes (Claude, GPT, DeepSeek, GLM...) share memories,
   read each other's outputs, and collaborate on DAG-orchestrated tasks through one
   memory service. TRIGGER when: user mentions "agent memory pool", "共享内存池",
-  "共享记忆", "多 Agent 协作记忆", "跨厂家 Agent", "memory sharing between agents",
-  "记忆固化", "memory consolidation", "记忆分层", "DAG 任务拆解调度", or wants
-  multiple AI agents from different vendors to remember and build on each other's
-  work. DO NOT TRIGGER when: user asks about the mem0 SDK itself (use the mem0
-  skill), cognee knowledge graphs, or single-agent conversation memory inside one
-  app process.
+  "共享记忆", "多 Agent 协作记忆", "跨厂家 Agent", "  memory sharing between agents",
+  "记忆固化", "memory consolidation", "记忆分层", "DAG 任务拆解调度", "圆桌会议"
+  (multi-agent roundtable), "任务交接" (cross-session task handoff), "任务书",
+  or wants multiple AI agents from different vendors to remember and build on
+  each other's work. DO NOT TRIGGER when: user asks about the mem0 SDK itself
+  (use the mem0 skill), cognee knowledge graphs, or single-agent conversation
+  memory inside one app process.
 license: MIT
 metadata:
   author: Yannih-y
-  version: "0.2.0"
+  version: "0.3.0"
   category: ai-memory
   tags: "memory, multi-agent, orchestration, mem0, faiss, mcp, fastapi"
 compatibility: >

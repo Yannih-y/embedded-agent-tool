@@ -2,9 +2,19 @@
 
 > 多 Agent 共享内存池：打通不同厂家 AI 的交互壁垒，让各自独立进程的 Agent
 > 共享记忆、承接彼此产出、协作完成任务。
+> *A local-first shared memory service that lets AI agents from different
+> vendors (Cursor / Claude Code / Codex / Windsurf / Kiro / your own gateway)
+> read and write the same semantic memory.*
 
+[![CI](https://github.com/Yannih-y/embedded-agent-tool/actions/workflows/ci.yml/badge.svg)](https://github.com/Yannih-y/embedded-agent-tool/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
+| 平台 | 一键部署 | 登录自启 |
+|------|----------|----------|
+| Windows | `scripts/bootstrap.ps1`（实机验证） | HKCU Run |
+| macOS | `scripts/bootstrap.sh`（首版） | LaunchAgent |
+| Linux | `scripts/bootstrap.sh`（首版） | systemd --user |
 
 ## 它解决什么问题
 
@@ -152,13 +162,21 @@ uv run pytest -q
 # 测试套件用独立临时数据目录，不会碰 ~/.agent_memory_pool 里的真实数据
 ```
 
-## 当前状态与路线图
+## 安全
 
-**技术验证通过（能跑通、设计成立），尚未到生产可用。** 详见 [BACKLOG.md](BACKLOG.md)：
+单机、单用户、本机回环的信任模型：Host 头防护（DNS rebinding）、写入内容审查
+（提示注入 / 隐形字符 / 凭证格式命中即拒）、数据不出网。完整威胁模型与部署
+红线见 [SECURITY.md](SECURITY.md)。
 
-- P0：faiss/SQLite 写锁并发瓶颈（加速比 1.49x）、真 Agent 走 HTTP 端点完整协作
-- P1：全链路边缘压测、万级记忆检索质量、网关模型降级策略
-- P2：集中配置、崩溃恢复与备份、固化冲突策略细化
+## 当前状态与路线图（v0.3.0）
+
+**单机产品可用**（安全审查 / CI / 跨平台部署 / 中文检索），多机与规模化在路上。
+详见 [BACKLOG.md](BACKLOG.md)：
+
+- **0.4.0**：长期记忆 markdown 导出 + git 同步（= 备份 + 换机迁移，设计已经
+  圆桌定稿）
+- P1：MCP 暴露 `run_id` 过滤、固化/TTL 调度接入服务进程、记忆去重卫生
+- P2：faiss → qdrant（混合检索 + 项目维度过滤）、写锁并发、集中配置
 
 ## License
 
