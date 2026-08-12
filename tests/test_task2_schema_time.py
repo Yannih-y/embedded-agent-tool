@@ -63,7 +63,7 @@ def test_build_metadata_rejects_managed_keys():
 # ---------- 端到端：服务盖章 + 检索注入相对时间 ----------
 
 def test_created_at_stamped_by_service_not_agent():
-    with TestClient(app) as client:
+    with TestClient(app, base_url="http://127.0.0.1:8800") as client:
         # Agent 试图传一个假的 created_at，不该生效
         fake = "1999-01-01T00:00:00+00:00"
         r = client.post("/add", json={
@@ -90,7 +90,7 @@ def test_created_at_stamped_by_service_not_agent():
 
 
 def test_tier_written_and_readable():
-    with TestClient(app) as client:
+    with TestClient(app, base_url="http://127.0.0.1:8800") as client:
         client.post("/add", json={
             "messages": "长期结论：项目用RT-Thread",
             "user_id": "u_task2b",

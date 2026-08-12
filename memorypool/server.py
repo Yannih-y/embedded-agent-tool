@@ -111,6 +111,38 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Agent Memory Pool", lifespan=lifespan)
 
+# ---- Host 头防护（DNS rebinding） -------------------------------------------
+# /mcp 由 MCP SDK 自带 Host 校验，但 REST（/add /search）此前裸奔：恶意网页把
+# 域名 rebind 到 127.0.0.1 后，浏览器视作"同源"，能读走全部记忆、写入毒化内容
+# （检索结果会进每个 agent 的上下文，是现成的注入面）。默认只认回环 Host；
+# 局域网部署用 MEMPOOL_ALLOWED_HOSTS=nas.local,192.168.1.10 显式扩白。
+_LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
+
+
+def _host_allowed(raw_host: str) -> bool:
+    host = (raw_host or "").strip().lower()
+    if host.startswith("["):  # IPv6 形如 [::1]:8800
+        host = host[1 : host.index("]")] if "]" in host else host.lstrip("[")
+    else:
+        host = host.split(":", 1)[0]
+    if host in _LOOPBACK_HOSTS:
+        return True
+    extra = os.environ.get("MEMPOOL_ALLOWED_HOSTS", "")
+    return host in {h.strip().lower() for h in extra.split(",") if h.strip()}
+
+
+@app.middleware("http")
+async def host_guard(request, call_next):
+    if not _host_allowed(request.headers.get("host", "")):
+        from fastapi.responses import JSONResponse
+
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "Host 头不在白名单（DNS rebinding 防护）——"
+                     "本地访问用 127.0.0.1/localhost；局域网部署设 MEMPOOL_ALLOWED_HOSTS"},
+        )
+    return await call_next(request)
+
 
 class AddRequest(BaseModel):
     messages: str

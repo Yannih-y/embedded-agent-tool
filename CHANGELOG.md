@@ -2,6 +2,31 @@
 
 ## [Unreleased]
 
+### 安全
+
+- **REST 端点 Host 头防护（DNS rebinding）**：`/add` `/search` 此前无 Host
+  校验——恶意网页把域名 rebind 到 127.0.0.1 后可读走全部记忆、写入毒化内容
+  （检索结果进每个 agent 上下文，是现成注入面；`/mcp` 有 SDK 自带防护，REST
+  裸奔）。新增 `host_guard` 中间件：默认只认回环（127.0.0.1/localhost/::1，
+  含 IPv6 括号形态解析），局域网部署用 `MEMPOOL_ALLOWED_HOSTS` 显式扩白，
+  拒绝返回 403。新增 `tests/test_host_guard.py` 6 用例（伪造 Host 拒 / 回环放 /
+  扩白生效 / IPv6 / 解析边界）。既有 5 处 `TestClient(app)` 默认 `testserver`
+  Host 会被新防护拦截，统一对齐为回环 base_url（与 test_mcp_http_endpoint
+  同款写法）——属测试对齐生产行为（服务只监听回环），非放宽断言，防护本身
+  有独立正反用例锁定。全量 70 passed + 10 skipped
+
+### 修正（文档与实现不符，2026-08-12 自查）
+
+- **固化/TTL「自动触发」误述更正**：SKILL.md 曾写「MCP 零散写入由 IdleMonitor
+  兜底」——实际 `IdleMonitor`/`TTLCleaner` 只是库能力，server.py 从未加载，
+  零散写入的记忆不会被自动固化或清理。SKILL / workflows / README 三处已改为
+  实话并标注现状；BACKLOG 立项「服务进程接入固化/TTL 调度」（显式配置默认关，
+  需先定义工作流记忆豁免规则，防止把圆桌记录/任务书归纳掉破坏「会后任查」）
+- BACKLOG 新增 P1：写入内容注入审查（参照 AgentClaw scanMemoryContent）；
+  备份优先级提升（0.3.0 导出本质是备份，提到写锁优化之前）
+- usage.md 任务交接协议补**认领语义**：接活前先查重并写「已认领 <run_id>」，
+  防两个会话重复接同一任务书
+
 ### 新增
 
 - **MCP over streamable-http 端点**（`/mcp`，挂在服务进程内）：

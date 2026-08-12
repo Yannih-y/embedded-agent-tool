@@ -14,7 +14,7 @@ from memorypool.server import app
 
 def test_health_reports_key_status():
     """/health 带出启动自检的密钥状态 + pool 就绪。"""
-    with TestClient(app) as client:
+    with TestClient(app, base_url="http://127.0.0.1:8800") as client:
         r = client.get("/health")
         assert r.status_code == 200
         body = r.json()
@@ -31,7 +31,7 @@ def test_health_reports_key_status():
 )
 def test_health_models_deep_probe():
     """/health/models 现探密钥 + 模型通路，返回结构完整。"""
-    with TestClient(app) as client:
+    with TestClient(app, base_url="http://127.0.0.1:8800") as client:
         r = client.get("/health/models")
         assert r.status_code == 200
         body = r.json()

@@ -183,8 +183,10 @@ await Consolidator(pool, make_summarizer()).consolidate("alice")
 TTLCleaner(pool, ttl_seconds=24 * 3600).clean("alice")
 ```
 
-固化双触发：走调度器的场景在 DAG 全完成时精确触发；MCP 零散写入场景由
-`idle_monitor.IdleMonitor`（闲置超时，默认 5 分钟）兜底。
+> **现状注意**：固化与 TTL 清理是**库能力，需调用方显式调度**——服务进程
+> 当前不自动跑它们（`IdleMonitor` / `TTLCleaner` 已实现但未接入 server）。
+> 即：MCP / REST 零散写入的记忆**不会**被自动固化或清理，池子只进不出；
+> 服务进程内的调度接入已在 BACKLOG 立项（做成显式配置，默认关）。
 
 ## 多 Agent 协作（拆解 → DAG 调度 → 真 Agent）
 

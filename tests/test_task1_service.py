@@ -6,7 +6,7 @@ from memorypool.server import app
 
 
 def test_health_add_search():
-    with TestClient(app) as client:
+    with TestClient(app, base_url="http://127.0.0.1:8800") as client:
         # 服务起来
         r = client.get("/health")
         assert r.status_code == 200
