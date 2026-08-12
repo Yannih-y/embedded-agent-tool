@@ -36,6 +36,13 @@
 
 ### 文档
 
+- **0.3.0「markdown 导出 + git 同步」设计定稿**（BACKLOG P1 新节）：由跨厂家
+  圆桌会议产出——主持 cursor + 成员 AgentClaw default / hermes 两个独立 LLM
+  agent，两轮制（独立发言 + 交叉质询），全程留痕共享池
+  `run_id=roundtable-20260812-mempool030`。决议：按 user 聚合单文件、单向导出、
+  固化事件驱动 pull→写→commit→push、冲突落 `.conflicts/` 不写 merge driver、
+  目录 `memory/longterm/<user_id>.md`、防手动编辑双护栏（git 脏检查 + 导出
+  哈希比对）、文件头只读声明 + UTC 时间戳
 - **新增 [references/usage.md](references/usage.md)「如何使用」**：心智模型、
   `user_id`/`agent_id` 约定、IDE 五工具与 AgentClaw 话术、典型场景（IDE↔IDE /
   IDE↔网关 / DAG / 快慢记忆分工）、服务生命周期、使用向 FAQ；与 deployment
