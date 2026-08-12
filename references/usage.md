@@ -55,6 +55,20 @@ MCP 配好并重启工具后，对 agent 直接说自然语言即可——它会
 工具面板里名称一般是 `add_memory` / `search_memory`（或带 server 前缀，
 视客户端而定）。
 
+### 让每个新会话自动带上「共享池意识」（推荐，Cursor 项目规则）
+
+不想每次开新 chat 都解释一遍？在工作区建
+`.cursor/rules/shared-memory-pool.mdc`（frontmatter 写 `alwaysApply: true`），
+内容写清三件事，之后每个新会话天生就会用：
+
+1. **约定**：统一的 `user_id`、本工具的 `agent_id` 标识
+2. **何时用**：用户说「查共享池 / 接任务 / 其他工具做了什么」→ `search_memory`；
+   产出需跨会话接续 → `add_memory` 回写；闲聊不灌水
+3. **任务交接协议**：搜「任务书」接活 → 执行中回写进展 → 完成写总结（阻塞也回写）
+
+这样跨会话协作只需要对新会话说一句「查共享池接任务」。其他工具同理：
+Claude Code / Codex 用 nestwork 启动注入或各自的全局规则文件写同样内容。
+
 ## 在 AgentClaw 里怎么用
 
 AgentClaw 走 **HTTP MCP**（`http://127.0.0.1:8800/mcp`），不是 stdio。
