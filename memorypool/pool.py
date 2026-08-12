@@ -68,11 +68,18 @@ class MemoryPool:
         user_id: str,
         limit: int = 10,
         with_relations: bool = True,
+        run_id: Optional[str] = None,
     ) -> dict[str, Any]:
         """检索。向量召回按 user_id 过滤（共享可见性：不带 agent_id，同 user 互读），
         注入相对时间；可选合并该 user 的长期记忆关系。
+
+        run_id：可选窄化到某次协作/任务/会议线程——状态盘点靠纯语义 top-k 会漏
+        （2026-08-12 实际漏报过），带 run_id 才是可靠的精确切片。
         """
-        results = self._mem.search(query, filters={"user_id": user_id}, limit=limit)
+        filters: dict[str, Any] = {"user_id": user_id}
+        if run_id:
+            filters["run_id"] = run_id
+        results = self._mem.search(query, filters=filters, limit=limit)
         results = annotate_results(results)
         if with_relations:
             relations = relation_store.get_relations(user_id)

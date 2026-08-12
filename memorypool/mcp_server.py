@@ -51,7 +51,13 @@ class MemoryBackend(Protocol):
         tier: Tier = ...,
     ) -> dict[str, Any]: ...
 
-    def search(self, query: str, user_id: str, limit: int = ...) -> dict[str, Any]: ...
+    def search(
+        self,
+        query: str,
+        user_id: str,
+        limit: int = ...,
+        run_id: Optional[str] = ...,
+    ) -> dict[str, Any]: ...
 
 
 def build_mcp(
@@ -85,9 +91,15 @@ def build_mcp(
         result = mem.add(content, user_id=user_id, agent_id=agent_id, tier=Tier(tier))
         return {"added": result}
 
-    @mcp.tool(description="从共享内存池检索记忆，按 user_id 过滤，返回向量命中+相对时间+长期记忆关系。")
-    def search_memory(query: str, user_id: str, limit: int = 10) -> dict:
-        return mem.search(query, user_id=user_id, limit=limit)
+    @mcp.tool(
+        description="从共享内存池检索记忆，按 user_id 过滤，返回向量命中+相对时间+"
+        "长期记忆关系。可选 run_id 窄化到某次协作/任务/会议线程（状态盘点用它才可靠，"
+        "纯语义 top-k 会漏）。"
+    )
+    def search_memory(
+        query: str, user_id: str, limit: int = 10, run_id: str | None = None
+    ) -> dict:
+        return mem.search(query, user_id=user_id, limit=limit, run_id=run_id)
 
     return mcp
 

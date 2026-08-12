@@ -47,6 +47,8 @@
 | 登录自启 | `daemon.py` `scripts/bootstrap.ps1` | `pythonw -m memorypool.daemon` 入口（确保在跑即退，无窗口幂等）；HKCU Run 注册（bootstrap 第 5 步自动写，`-SkipAutostart` 可关）；杀进程→冷拉起→health ok 实测 |
 | REST Host 防护 | `server.py` `tests/test_host_guard.py` | DNS rebinding 拦截：默认回环白名单 + `MEMPOOL_ALLOWED_HOSTS` 扩白；真实服务实测伪造 Host 403 |
 | 中文 embedding | `config.py` `scripts/reembed.py` | 默认模型 en→zh（bge-small-zh-v1.5，512维，维度映射表）；重嵌入迁移工具（停服自检/备份/导出快照/维度自检/计数校验）；本机 33 条迁移实测，口语化查询命中率显著提升（三组对照基线） |
+| markdown 导出 + git 同步 | `exporter.py`（0.4.0） | 圆桌决议七条落地：单文件/单向/双护栏/冲突隔离 .conflicts/；真实验收 66 条导出私有 nestwork 并推送，幂等复跑 no_change；7 测试用例 |
+| run_id 精确切片 | `pool/server/mcp_server/client_sdk` | search 全面支持 run_id 过滤 + GET /memories 全量列出——检索漏报事故根治项 |
 
 ---
 
@@ -79,11 +81,9 @@
 - [ ] **写入内容注入审查**：检索结果进每个 agent 上下文，是现成注入面；
   参照 AgentClaw `scanMemoryContent`（prompt injection 模式 + 隐形 unicode +
   凭证窃取 payload）在 `/add` 前扫描
-- [ ] **备份**：faiss 损坏 = 记忆全丢；0.4.0 markdown 导出本质就是备份，
-  优先级提到写锁优化之前（个人负载下 1.49x 加速比够用）
-- [ ] **MCP 检索暴露 run_id 过滤**（2026-08-12 事故驱动：状态盘点靠纯语义 top-k
-  漏掉了已存在的任务完成记忆，导致向用户报告错误事实。faiss 无 BM25 混合检索，
-  精确 run_id/ID 串是弱项——`list_by_run` 池内已有，补到 MCP/REST 面即可）
+- [x] ~~备份~~（0.4.0 完成：mempool-export 全量导出 + git 同步；导出挂
+  固化事件自动触发待固化调度接入后做）
+- [x] ~~MCP 检索暴露 run_id 过滤~~（0.4.0 完成：search 全面支持 + GET /memories）
 - [ ] **记忆去重/卫生**：infer=False 老实存意味着同语义反复写会稀释检索
   （已实际发生：多条相似"完成"记忆）；中期考虑写入前近重检测或定期卫生任务
 - [ ] 全链路只跑过 happy path，真 LLM 的边缘（畸形归纳、超长输出）没在全链路里压

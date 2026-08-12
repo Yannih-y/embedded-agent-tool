@@ -168,15 +168,26 @@ uv run pytest -q
 （提示注入 / 隐形字符 / 凭证格式命中即拒）、数据不出网。完整威胁模型与部署
 红线见 [SECURITY.md](SECURITY.md)。
 
-## 当前状态与路线图（v0.3.0）
+## 备份与换机（v0.4.0）
 
-**单机产品可用**（安全审查 / CI / 跨平台部署 / 中文检索），多机与规模化在路上。
+```bash
+mempool-export --user <你的id> --repo /path/to/私有git仓库
+# 或：python -m memorypool.exporter --user <你的id> --repo ...
+```
+
+全量记忆导出为人可读 markdown（按 tier 分节、只读快照）并自动
+`pull → commit → push`。防手动编辑双护栏 + 双机冲突自动隔离 `.conflicts/`。
+换机时：新机克隆仓库即有全部记忆文本（向量索引按需重建）。
+
+## 当前状态与路线图（v0.4.0）
+
+**单机产品可用**（安全审查 / CI / 跨平台部署 / 中文检索 / markdown 备份同步）。
 详见 [BACKLOG.md](BACKLOG.md)：
 
-- **0.4.0**：长期记忆 markdown 导出 + git 同步（= 备份 + 换机迁移，设计已经
-  圆桌定稿）
-- P1：MCP 暴露 `run_id` 过滤、固化/TTL 调度接入服务进程、记忆去重卫生
-- P2：faiss → qdrant（混合检索 + 项目维度过滤）、写锁并发、集中配置
+- P1：固化/TTL 调度接入服务进程（含工作流记忆豁免规则）、记忆去重卫生、
+  导出挂固化事件自动触发
+- P2：faiss → qdrant（混合检索 + 项目维度过滤）、写锁并发、集中配置、
+  导入命令（md → 新机池重建）
 
 ## License
 

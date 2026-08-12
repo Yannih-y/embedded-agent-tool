@@ -95,7 +95,7 @@ powershell -ExecutionPolicy Bypass -File scripts\bootstrap.ps1 `
 |------|----------|
 | 密钥 `~/.agent_memory_pool/.env` | 手动拷贝一个文件（密钥永不进 git） |
 | 慢记忆（nestwork 仓库） | git 自动同步，换机即有——前提是远程建在**私有**仓库 |
-| 快记忆数据（faiss + SQLite） | 默认不迁移，新机从空池开始；急用：停服务后整目录拷 `~/.agent_memory_pool`（路线图 0.4.0 做 markdown 导出 + git 同步根治） |
+| 快记忆（0.4.0 起） | `mempool-export --user <id> --repo <私有仓库>` 导出 markdown 随 git 同步；新机克隆即有全部记忆文本。急用向量级迁移：停服务后整目录拷 `~/.agent_memory_pool` |
 
 > 小技巧：把带你真实仓库地址的完整换机命令存进**私有** nestwork 仓库的
 > `DEPLOY.md`——新设备登录 GitHub 打开该页即可复制；公开仓库的文档里只留占位符。

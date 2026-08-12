@@ -63,10 +63,43 @@ class MemoryPoolClient:
             },
         )
 
-    def search(self, query: str, user_id: str, limit: int = 10) -> dict[str, Any]:
-        return self._post(
-            "/search", {"query": query, "user_id": user_id, "limit": limit}
-        )
+    def search(
+        self,
+        query: str,
+        user_id: str,
+        limit: int = 10,
+        run_id: Optional[str] = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {"query": query, "user_id": user_id, "limit": limit}
+        if run_id:
+            payload["run_id"] = run_id
+        return self._post("/search", payload)
+
+    def list(
+        self,
+        user_id: str,
+        run_id: Optional[str] = None,
+        tier: Optional[str] = None,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        """全量列出（非向量检索）：备份/导出/状态盘点用，按 run_id/tier 可选过滤。"""
+        params: dict[str, Any] = {"user_id": user_id, "limit": limit}
+        if run_id:
+            params["run_id"] = run_id
+        if tier:
+            params["tier"] = tier
+        url = f"{self._base}/memories"
+        try:
+            resp = httpx.get(url, params=params, timeout=self._timeout)
+        except httpx.ConnectError:
+            if not self._auto_start:
+                raise
+            from memorypool.daemon import ensure_service
+
+            ensure_service(self._base)
+            resp = httpx.get(url, params=params, timeout=self._timeout)
+        resp.raise_for_status()
+        return resp.json()["results"]
 
     def health(self) -> dict[str, Any]:
         """纯探活：不触发自动拉起（想知道「现在起没起」就该拿到真实答案）。"""

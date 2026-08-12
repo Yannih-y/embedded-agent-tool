@@ -59,8 +59,14 @@ class _InProcessBackend:
             content, user_id=user_id, agent_id=agent_id, run_id=run_id, tier=tier
         )
 
-    def search(self, query: str, user_id: str, limit: int = 10) -> dict[str, Any]:
-        return get_pool().search(query, user_id=user_id, limit=limit)
+    def search(
+        self,
+        query: str,
+        user_id: str,
+        limit: int = 10,
+        run_id: Optional[str] = None,
+    ) -> dict[str, Any]:
+        return get_pool().search(query, user_id=user_id, limit=limit, run_id=run_id)
 
 
 # /mcp 的当前 ASGI 处理器。放 dict 而不是模块级变量重绑定，闭包好取。
@@ -156,6 +162,7 @@ class SearchRequest(BaseModel):
     query: str
     user_id: str
     limit: int = 10
+    run_id: str | None = None  # 可选窄化到某次协作/任务线程（状态盘点的可靠切片）
 
 
 @app.get("/health")
@@ -221,8 +228,35 @@ async def add(req: AddRequest):
 async def search(req: SearchRequest):
     pool = get_pool()
     return await run_in_threadpool(
-        pool.search, req.query, user_id=req.user_id, limit=req.limit
+        pool.search,
+        req.query,
+        user_id=req.user_id,
+        limit=req.limit,
+        run_id=req.run_id,
     )
+
+
+@app.get("/memories")
+async def list_memories(
+    user_id: str,
+    run_id: str | None = None,
+    tier: str | None = None,
+    limit: int = 100,
+):
+    """全量列出（非向量检索）。备份/导出（mempool-export）与状态盘点的可靠切片：
+    纯语义 top-k 对"XX 做完没"必有遗漏，精确列出才是权威答案。
+    """
+    pool = get_pool()
+    if run_id:
+        items = await run_in_threadpool(
+            pool.list_by_run, user_id, run_id, top_k=limit
+        )
+    else:
+        tier_val = Tier(tier) if tier else None
+        items = await run_in_threadpool(
+            pool.list_memories, user_id, tier=tier_val, top_k=limit
+        )
+    return {"results": items}
 
 
 # 挂在所有显式路由之后：FastAPI 按注册顺序匹配，/health /add /search 优先命中，

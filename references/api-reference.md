@@ -40,8 +40,11 @@
 ### `POST /search` — 向量检索
 
 ```json
-{ "query": "登录方案", "user_id": "alice", "limit": 10 }
+{ "query": "登录方案", "user_id": "alice", "limit": 10, "run_id": "run_001" }
 ```
+
+`run_id` 可选：窄化到某次协作/任务/会议线程。状态盘点（"XX 做完没"）用它
+才可靠——纯语义 top-k 必有遗漏。
 
 返回：向量命中（含 `age` 相对时间字段）+ 该 user 的长期记忆关系：
 
@@ -52,12 +55,32 @@
 }
 ```
 
+### `GET /memories` — 全量列出（非向量检索）
+
+```
+/memories?user_id=alice&run_id=run_001&tier=realtime&limit=100
+```
+
+备份/导出（`mempool-export`）的数据面；也是状态盘点的权威答案。
+`run_id` / `tier` 可选过滤。返回 `{"results": [...]}`。
+
+## 导出 CLI：`mempool-export`（0.4.0）
+
+```bash
+mempool-export --user alice --repo /path/to/私有git仓库 [--subdir memory/pool] [--no-push]
+```
+
+全量导出为人可读 markdown（按 tier 分节、只读快照头）+ git 自动
+`pull --rebase → commit → push`。防手动编辑双护栏（脏检查中止 / 人工改动保全
+`.edited.md`），双机冲突自动隔离 `.conflicts/`（主文件取远端）。数据经 HTTP
+取自服务进程，不违反单写者铁律。库接口：`memorypool.exporter.export_memories()`。
+
 ## MCP 工具（两种传输，同一套工具）
 
 | 工具 | 参数 | 说明 |
 |------|------|------|
-| `add_memory` | `content, user_id, agent_id?, tier?` | 写记忆，同 user 下 Agent 都能检索到 |
-| `search_memory` | `query, user_id, limit?` | 检索：向量命中 + 相对时间 + 长期关系 |
+| `add_memory` | `content, user_id, agent_id?, tier?` | 写记忆，同 user 下 Agent 都能检索到（写前过内容审查，命中即拒） |
+| `search_memory` | `query, user_id, limit?, run_id?` | 检索：向量命中 + 相对时间 + 长期关系；`run_id` 精确切片 |
 
 ### stdio 传输（memorypool.mcp_server，IDE 工具用）
 

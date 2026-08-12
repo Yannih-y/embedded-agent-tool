@@ -178,12 +178,14 @@ IDE 侧记下「用户偏好回复简短」或「今晚要联调飞书」→ Age
 
 | 操作 | 怎么做 |
 |------|--------|
-| 看是否在线 | `curl http://127.0.0.1:8800/health` |
-| 日志 | `~/.agent_memory_pool/logs/server.log` |
+| 看是否在线 | `curl http://127.0.0.1:8800/health`（含 version / embed_model） |
+| 日志 | `~/.agent_memory_pool/logs/server.log`（启动时超 5MB 自动轮转） |
 | PID | `~/.agent_memory_pool/server.pid` |
 | 停服务 | Windows：`taskkill /PID <pid> /F`；POSIX：`kill $(cat ~/.agent_memory_pool/server.pid)` |
 | 再起 | 任意 SDK/MCP 调用即可自动拉起；或 `pythonw -m memorypool.daemon` |
 | 密钥 | 编辑 `~/.agent_memory_pool/.env` 后重启服务进程 |
+| **备份/同步** | `mempool-export --user <id> --repo <私有git仓库>`——全量导出 markdown 并 push；建议定期跑或挂计划任务 |
+| 精确盘点 | `GET /memories?user_id=&run_id=`（或 `search_memory` 带 `run_id`）——比纯语义检索可靠 |
 
 ## 常见问题（使用向）
 

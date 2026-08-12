@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.4.0] - 2026-08-12
+
+记忆出池：markdown 导出 + git 同步（= 备份 + 换机迁移 + 人可读审计），
+落地 2026-08-12 圆桌决议（`run_id=roundtable-20260812-mempool030`）七条。
+
+### 新增
+
+- **`memorypool/exporter.py` + CLI `mempool-export`**：按 user 聚合单文件、
+  单向导出（池唯一权威，md 只读快照）、`pull --rebase → 写 → commit → push`；
+  防手动编辑双护栏（①git 脏检查中止——必须在 pull **之前**，放后面会被 rebase
+  的脏拒绝掩盖成假冲突，实测踩过；②导出哈希比对，人工改动保全为 `.edited.md`
+  再重写主文件）；双机冲突不写 merge driver——验真冲突后 `pull -X theirs`
+  主文件取远端，本机版本隔离 `memory/pool/.conflicts/<user>-<host>-<ts>.md`
+  并推送告警；变更检测用剥离时间戳行的正文哈希（否则 `last-exported-at`
+  每次都变，no_change 永远测不出——实测踩过）；数据经 HTTP 取自服务进程，
+  不违反单写者铁律。测试 7 例（渲染/首推/幂等/脏中止/编辑保全/双机冲突/非仓库）
+- **与决议的一处声明偏离**：决议写「导出 longterm 到 `memory/longterm/`」，
+  但固化调度未接入（0.3.0 自查），longterm 现实为空——只导 longterm 是形式
+  交付。实现改为**全量导出**（按 tier 分节，目录 `memory/pool/`）：备份价值
+  要求全量，faiss 损坏时 realtime 同样要能恢复；固化上线后分节结构天然兼容
+- **`GET /memories` 全量列出端点** + SDK `client.list()`：备份/导出的数据面，
+  也是状态盘点的权威答案（纯语义 top-k 对"XX 做完没"必有遗漏）
+- **search 支持 `run_id` 过滤**（REST / MCP `search_memory` / SDK / pool）：
+  精确切到某次协作/任务/会议线程——2026-08-12 检索漏报事故的根治项
+- 真实验收：本机 66 条记忆导出私有 nestwork 仓库并推送（commit 703a5d5），
+  幂等复跑 no_change；全量测试 96 passed + 10 skipped
+
 ## [0.3.0] - 2026-08-12
 
 产品化发布：安全（写入审查 + Host 防护）、跨平台（bootstrap.sh）、CI、

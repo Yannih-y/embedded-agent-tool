@@ -1,6 +1,6 @@
 [project]
 name = "agent-memory-pool"
-version = "0.3.0"
+version = "0.4.0"
 description = "多Agent共享内存池：打通不同厂家AI交互壁垒，独立服务进程 + 分层记忆"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -27,6 +27,7 @@ dev = [
 mempool-server = "memorypool.server:main"
 mempool-daemon = "memorypool.daemon:main"
 mempool-mcp = "memorypool.mcp_server:main"
+mempool-export = "memorypool.exporter:main"
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
