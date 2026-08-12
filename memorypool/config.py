@@ -46,9 +46,18 @@ DATA_ROOT.mkdir(parents=True, exist_ok=True)
 # SQLite 库文件：版本/元数据权威源 + 长期记忆关系三元组表（服务进程独占）
 DB_PATH = DATA_ROOT / "mempool.db"
 
-# 本地 embedding 模型（fastembed 默认 gte-large，1024 维；可用 bge-small 更快）
-EMBED_MODEL = os.environ.get("MEMPOOL_EMBED_MODEL", "BAAI/bge-small-en-v1.5")
-EMBED_DIMS = int(os.environ.get("MEMPOOL_EMBED_DIMS", "384"))
+# 本地 embedding 模型（fastembed；zh 版对中文内容检索质量远好于 en 版）。
+# 换模型必须重建向量索引：跑 scripts/reembed.py（新旧向量空间不同，旧索引直接查会失真）。
+# 注意维度随模型变（zh=512，en=384）——faiss 索引维度错配会在写入时断言炸。
+_MODEL_DIMS = {
+    "BAAI/bge-small-zh-v1.5": 512,
+    "BAAI/bge-small-en-v1.5": 384,
+}
+EMBED_MODEL = os.environ.get("MEMPOOL_EMBED_MODEL", "BAAI/bge-small-zh-v1.5")
+# 表外自定义模型必须显式设 MEMPOOL_EMBED_DIMS（缺省 384 只是历史兜底）
+EMBED_DIMS = int(
+    os.environ.get("MEMPOOL_EMBED_DIMS", str(_MODEL_DIMS.get(EMBED_MODEL, 384)))
+)
 
 # 云 LLM（抽事实/固化用，调用少、要质量）
 LLM_PROVIDER = os.environ.get("MEMPOOL_LLM_PROVIDER", "anthropic")

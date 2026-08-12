@@ -25,10 +25,15 @@ Python / curl ──REST /add /search ─┘
 ## 日常约定（先定好再写）
 
 1. **选定一个 `user_id` 并写死**（例如你的昵称缩写）。所有 IDE、AgentClaw、脚本都用它。
-2. **`agent_id` 用工具自己的名字**：`cursor`、`claude-code`、`codex`、`windsurf`、`kiro`、`agentclaw`。
+2. **`agent_id` 用工具自己的名字**：`cursor`、`claude-code`、`codex`、`windsurf`、`kiro`、`agentclaw`；
+   同一工具开多个会话同时干活时加短后缀区分（如 `cursor-nas1`），否则留痕混淆。
 3. **写什么**：需要跨软件接续的工作上下文、协作结论、暗号/里程碑、给下游 agent 的产出。
 4. **不写什么**：密码、token、银行卡；单软件内部的私人事实（AgentClaw 用内部 `remember`/`personal_*`）。
 5. **检索时带上同一个 `user_id`**，否则查不到别人写的（也查不到自己写错边界的）。
+6. **矛盾以新为准**：记忆是 append-only 的，事实会过时（如"任务无人认领"晚些就不成立）；
+   同主题冲突时看 `age`/`created_at` 取最新，更正过时事实时写一条新记忆声明作废。
+7. **状态盘点别只查一次**：top-k 语义检索对"XX 做完没"这类盘点必有遗漏，
+   用专有名词（run_id、服务名、项目名）多角度查几次再下结论。
 
 ## 在 IDE 里怎么用（Cursor / Claude Code / Codex / Windsurf / Kiro）
 

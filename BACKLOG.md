@@ -45,6 +45,8 @@
 | 换机一键部署 | `scripts/bootstrap.ps1` | 自动检测 Cursor/Claude Code/Codex/Windsurf/Kiro 注册 MCP + 可选 nestwork 慢记忆 + 冒烟测试；幂等重跑实测通过 |
 | HTTP MCP 端点 | `server.py` `mcp_server.py` | `/mcp` streamable-http（stateless+纯 JSON，进程内直连后端）；AgentClaw 网关双向实测（读回暗号 + 回写留痕 agent_id=agentclaw），personal 分级会话经审查登记放行后三路实测全通 |
 | 登录自启 | `daemon.py` `scripts/bootstrap.ps1` | `pythonw -m memorypool.daemon` 入口（确保在跑即退，无窗口幂等）；HKCU Run 注册（bootstrap 第 5 步自动写，`-SkipAutostart` 可关）；杀进程→冷拉起→health ok 实测 |
+| REST Host 防护 | `server.py` `tests/test_host_guard.py` | DNS rebinding 拦截：默认回环白名单 + `MEMPOOL_ALLOWED_HOSTS` 扩白；真实服务实测伪造 Host 403 |
+| 中文 embedding | `config.py` `scripts/reembed.py` | 默认模型 en→zh（bge-small-zh-v1.5，512维，维度映射表）；重嵌入迁移工具（停服自检/备份/导出快照/维度自检/计数校验）；本机 33 条迁移实测，口语化查询命中率显著提升（三组对照基线） |
 
 ---
 
@@ -79,6 +81,11 @@
   凭证窃取 payload）在 `/add` 前扫描
 - [ ] **备份**：faiss 损坏 = 记忆全丢；0.3.0 markdown 导出本质就是备份，
   优先级提到写锁优化之前（个人负载下 1.49x 加速比够用）
+- [ ] **MCP 检索暴露 run_id 过滤**（2026-08-12 事故驱动：状态盘点靠纯语义 top-k
+  漏掉了已存在的任务完成记忆，导致向用户报告错误事实。faiss 无 BM25 混合检索，
+  精确 run_id/ID 串是弱项——`list_by_run` 池内已有，补到 MCP/REST 面即可）
+- [ ] **记忆去重/卫生**：infer=False 老实存意味着同语义反复写会稀释检索
+  （已实际发生：多条相似"完成"记忆）；中期考虑写入前近重检测或定期卫生任务
 - [ ] 全链路只跑过 happy path，真 LLM 的边缘（畸形归纳、超长输出）没在全链路里压
 - [ ] 大数据量（万级记忆）下的检索质量与 faiss 性能未测
 - [ ] 网关模型可用性依赖外部实时状态（会突然下架/502），需要更强的运行时降级策略
